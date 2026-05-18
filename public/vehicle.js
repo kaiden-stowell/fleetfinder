@@ -179,6 +179,65 @@ $('#ciSubmit').addEventListener('click', async () => {
   }
 });
 
+// ── Damage photos ──────────────────────────────────────────────────────────
+async function loadDamage() {
+  try {
+    const records = await api('/damage?vehicleId=' + vehicleId);
+    records.sort((a, b) => b.createdAt - a.createdAt);
+    $('#damageList').innerHTML = records.length ? records.map(d => `
+      <div class="damage-card">
+        <div class="damage-photos">
+          ${(d.files || []).map(f => `<a href="/uploads/${esc(f)}" target="_blank">
+            <img src="/uploads/${esc(f)}" alt="damage photo" /></a>`).join('')}
+        </div>
+        <div class="damage-meta">
+          <span>${new Date(d.createdAt).toLocaleString()}${d.reportedBy ? ' · ' + esc(d.reportedBy) : ''}</span>
+          <button class="ghost" data-deldmg="${d.id}">Delete</button>
+        </div>
+        ${d.note ? `<div class="damage-note">${esc(d.note)}</div>` : ''}
+      </div>
+    `).join('') : '<div class="empty">No damage photos for this vehicle.</div>';
+  } catch { /* schedule/PIN errors handled by load() */ }
+}
+
+$('#damageFiles').addEventListener('change', () => {
+  const n = $('#damageFiles').files.length;
+  $('#damageSubmit').disabled = n === 0;
+  $('#damageInfo').textContent = n ? `${n} photo${n > 1 ? 's' : ''} selected` : '';
+});
+
+$('#damageForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  if (!$('#damageFiles').files.length) return;
+  const fd = new FormData();
+  for (const f of $('#damageFiles').files) fd.append('photos', f);
+  fd.append('note', $('#damageNote').value.trim());
+  fd.append('reportedBy', $('#ciEmployee').value.trim());
+  $('#damageSubmit').disabled = true;
+  $('#damageInfo').textContent = 'Uploading…';
+  try {
+    const res = await fetch('/api/vehicles/' + vehicleId + '/damage', {
+      method: 'POST',
+      headers: pin ? { 'X-Fleet-Pin': pin } : {},
+      body: fd,
+    });
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.status);
+    $('#damageForm').reset();
+    $('#damageInfo').textContent = '';
+    loadDamage();
+  } catch (err) {
+    alert('Upload failed: ' + err.message);
+    $('#damageInfo').textContent = '';
+  }
+});
+
+$('#damageList').addEventListener('click', async e => {
+  const id = e.target.dataset.deldmg;
+  if (!id || !confirm('Delete this damage report and its photos?')) return;
+  await api('/damage/' + id, { method: 'DELETE' });
+  loadDamage();
+});
+
 // ── Load ───────────────────────────────────────────────────────────────────
 async function load() {
   try {
@@ -196,6 +255,7 @@ async function load() {
     renderChecklist(vehicle);
     refreshState();
     renderHistory(logs);
+    loadDamage();
   } catch (e) {
     if (e.pin) {
       show('#vContent', false);

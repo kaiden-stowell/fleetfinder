@@ -53,6 +53,20 @@
       </section>
 
       <section class="v-section">
+        <h2>Damage photos</h2>
+        <p class="hint">Take or upload photos of any damage to this vehicle.</p>
+        <div id="damageList" class="damage-list"></div>
+        <form id="damageForm" class="damage-form">
+          <label class="file-btn">📷 Add photos
+            <input type="file" id="damageFiles" accept="image/*" multiple />
+          </label>
+          <input type="text" id="damageNote" placeholder="Describe the damage (optional)" />
+          <button type="submit" id="damageSubmit" disabled>Upload</button>
+          <span id="damageInfo" class="muted"></span>
+        </form>
+      </section>
+
+      <section class="v-section">
         <h2>Recent check-ins</h2>
         <div id="logHistory" class="log-history"></div>
       </section>

@@ -2,6 +2,7 @@ node_modules/
 .env
 data/db.json
 data/db.backup.json
+data/uploads/
 logs/
 *.log
 .DS_Store

@@ -6,6 +6,7 @@ const CHECKLIST = window.FLEET_CHECKLIST;
 
 let vehiclesCache = [];
 let scheduleByVehicle = {};
+let damageCountByVehicle = {};
 let currentVehicleId = null;
 
 async function api(path, opts) {
@@ -84,7 +85,8 @@ function renderVehicles(rows) {
   tb.innerHTML = rows.map(v => `
     <tr>
       <td>
-        <div class="v-name">${esc(v.name)}</div>
+        <div class="v-name">${esc(v.name)}${damageCountByVehicle[v.id]
+          ? ` <span class="dmg-badge">📷 ${damageCountByVehicle[v.id]}</span>` : ''}</div>
         ${v.plate ? `<div class="v-sub">${esc(v.plate)}</div>` : ''}
       </td>
       <td>${esc([v.make, v.model, v.year].filter(Boolean).join(' ')) || '—'}</td>
@@ -117,10 +119,14 @@ function renderRecent(logs, vehicles) {
 
 // ── Refresh everything ─────────────────────────────────────────────────────
 async function refresh() {
-  const [stats, vehicles, sched, logs] = await Promise.all([
-    api('/stats'), api('/vehicles'), api('/schedule'), api('/logs'),
+  const [stats, vehicles, sched, logs, damage] = await Promise.all([
+    api('/stats'), api('/vehicles'), api('/schedule'), api('/logs'), api('/damage'),
   ]);
   scheduleByVehicle = Object.fromEntries(sched.vehicles.map(v => [v.id, v]));
+  damageCountByVehicle = {};
+  for (const d of damage) {
+    damageCountByVehicle[d.vehicleId] = (damageCountByVehicle[d.vehicleId] || 0) + 1;
+  }
   renderStats(stats, sched.summary);
   renderDue(sched.dueItems);
   renderVehicles(vehicles);
@@ -250,9 +256,68 @@ function openCheckin(vehicle) {
   renderModalSchedule(vehicle.id);
   renderChecklist(vehicle);
   refreshChecklistState();
+  $('#damageForm').reset();
+  $('#damageInfo').textContent = '';
+  $('#damageSubmit').disabled = true;
   $('#modal').hidden = false;
   loadHistory(vehicle.id);
+  loadDamage(vehicle.id);
 }
+
+// ── Damage photos ──────────────────────────────────────────────────────────
+async function loadDamage(vehicleId) {
+  const records = await api('/damage?vehicleId=' + vehicleId);
+  records.sort((a, b) => b.createdAt - a.createdAt);
+  $('#damageList').innerHTML = records.length ? records.map(d => `
+    <div class="damage-card">
+      <div class="damage-photos">
+        ${(d.files || []).map(f => `<a href="/uploads/${esc(f)}" target="_blank">
+          <img src="/uploads/${esc(f)}" alt="damage photo" /></a>`).join('')}
+      </div>
+      <div class="damage-meta">
+        <span>${new Date(d.createdAt).toLocaleString()}${d.reportedBy ? ' · ' + esc(d.reportedBy) : ''}</span>
+        <button class="ghost" data-deldmg="${d.id}">Delete</button>
+      </div>
+      ${d.note ? `<div class="damage-note">${esc(d.note)}</div>` : ''}
+    </div>
+  `).join('') : '<div class="empty">No damage photos for this vehicle.</div>';
+}
+
+$('#damageFiles').addEventListener('change', () => {
+  const n = $('#damageFiles').files.length;
+  $('#damageSubmit').disabled = n === 0;
+  $('#damageInfo').textContent = n ? `${n} photo${n > 1 ? 's' : ''} selected` : '';
+});
+
+$('#damageForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  if (!currentVehicleId || !$('#damageFiles').files.length) return;
+  const fd = new FormData();
+  for (const f of $('#damageFiles').files) fd.append('photos', f);
+  fd.append('note', $('#damageNote').value.trim());
+  $('#damageSubmit').disabled = true;
+  $('#damageInfo').textContent = 'Uploading…';
+  try {
+    const res = await fetch(`/api/vehicles/${currentVehicleId}/damage`,
+      { method: 'POST', body: fd });
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.status);
+    $('#damageForm').reset();
+    $('#damageInfo').textContent = '';
+    loadDamage(currentVehicleId);
+    refresh();
+  } catch (err) {
+    alert('Upload failed: ' + err.message);
+    $('#damageInfo').textContent = '';
+  }
+});
+
+$('#damageList').addEventListener('click', async e => {
+  const id = e.target.dataset.deldmg;
+  if (!id || !confirm('Delete this damage report and its photos?')) return;
+  await api('/damage/' + id, { method: 'DELETE' });
+  loadDamage(currentVehicleId);
+  refresh();
+});
 function closeModal() {
   $('#modal').hidden = true;
   currentVehicleId = null;
@@ -295,6 +360,7 @@ function connect() {
     if (currentVehicleId) {
       renderModalSchedule(currentVehicleId);
       loadHistory(currentVehicleId);
+      loadDamage(currentVehicleId);
     }
   };
 }

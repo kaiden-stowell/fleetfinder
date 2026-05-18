@@ -7,6 +7,8 @@ const bodyParser = require('body-parser');
 const http       = require('http');
 const fs         = require('fs');
 const path       = require('path');
+const crypto     = require('crypto');
+const multer     = require('multer');
 const WebSocket  = require('ws');
 
 const db       = require('./db');
@@ -117,6 +119,7 @@ app.get('/api/integration-manifest', (req, res) => {
       maintenance: 'GET|POST /api/maintenance, GET|PATCH|DELETE /api/maintenance/:id',
       logs:        'GET /api/logs?vehicleId=<id> — vehicle check-in / inspection logs',
       checkin:     'POST /api/vehicles/:id/checkin — submit a completed inspection checklist',
+      damage:      'GET /api/damage?vehicleId=<id>; POST /api/vehicles/:id/damage (multipart photos[]); DELETE /api/damage/:id',
       schedule:    'GET /api/schedule — when each vehicle next needs service',
       reports:     'GET /api/reports/{vehicles,logs,schedule}.csv — spreadsheet CSV exports',
       qr:          'GET /v/:id (service page), /v/:id/qr.svg, /v/:id/print, /qr-sheet (printable QR codes)',
@@ -127,6 +130,55 @@ app.get('/api/integration-manifest', (req, res) => {
 
 // ── Stats ──────────────────────────────────────────────────────────────────
 app.get('/api/stats', (req, res) => res.json(db.stats()));
+
+// ── Damage photos ──────────────────────────────────────────────────────────
+// Uploaded images live in data/uploads/ with unguessable UUID filenames and
+// are served (read-only) from /uploads so <img> tags can display them.
+const UPLOAD_DIR = path.join(__dirname, 'data', 'uploads');
+if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+app.use('/uploads', express.static(UPLOAD_DIR));
+
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: UPLOAD_DIR,
+    filename: (req, file, cb) => {
+      const ext = (path.extname(file.originalname).toLowerCase()
+        .match(/^\.[a-z0-9]{1,5}$/) || ['.jpg'])[0];
+      cb(null, crypto.randomUUID() + ext);
+    },
+  }),
+  limits: { fileSize: 15 * 1024 * 1024, files: 10 },
+  fileFilter: (req, file, cb) => cb(null, /^image\//.test(file.mimetype)),
+});
+
+// Upload one or more damage photos for a vehicle.
+app.post('/api/vehicles/:id/damage', upload.array('photos', 10), (req, res) => {
+  const vehicle = db.get('vehicles', req.params.id);
+  if (!vehicle) return res.status(404).json({ error: 'vehicle not found' });
+  const files = (req.files || []).map(f => f.filename);
+  if (!files.length) return res.status(400).json({ error: 'no image files received' });
+  const rec = db.create('damage', {
+    vehicleId:  vehicle.id,
+    files,
+    note:       req.body.note ? String(req.body.note) : '',
+    reportedBy: req.body.reportedBy ? String(req.body.reportedBy) : '',
+  });
+  broadcast('damage:created', rec);
+  res.status(201).json(rec);
+});
+
+// Delete a damage report — also removes its image files from disk.
+// Registered before the generic CRUD loop so it wins over the generic DELETE.
+app.delete('/api/damage/:id', (req, res) => {
+  const rec = db.get('damage', req.params.id);
+  if (!rec) return res.status(404).json({ error: 'not found' });
+  for (const f of rec.files || []) {
+    try { fs.unlinkSync(path.join(UPLOAD_DIR, f)); } catch { /* already gone */ }
+  }
+  db.remove('damage', req.params.id);
+  broadcast('damage:deleted', { id: req.params.id });
+  res.json({ ok: true });
+});
 
 // ── Generic REST CRUD for every collection ─────────────────────────────────
 for (const coll of db.COLLECTIONS) {

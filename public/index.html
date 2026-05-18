@@ -101,6 +101,17 @@
 
         <button id="ciSubmit" disabled>Submit check-in log</button>
 
+        <h3>Damage photos</h3>
+        <div id="damageList" class="damage-list"></div>
+        <form id="damageForm" class="damage-form">
+          <label class="file-btn">📷 Add photos
+            <input type="file" id="damageFiles" accept="image/*" multiple />
+          </label>
+          <input type="text" id="damageNote" placeholder="Describe the damage (optional)" />
+          <button type="submit" id="damageSubmit" disabled>Upload</button>
+          <span id="damageInfo" class="muted"></span>
+        </form>
+
         <h3>Check-in history</h3>
         <div id="logHistory" class="log-history"></div>
       </div>
