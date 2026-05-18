@@ -9,8 +9,9 @@ const fs         = require('fs');
 const path       = require('path');
 const WebSocket  = require('ws');
 
-const db      = require('./db');
-const reports = require('./reports');
+const db       = require('./db');
+const reports  = require('./reports');
+const schedule = require('./schedule');
 
 const HOST = process.env.HOST || '127.0.0.1';
 const PORT = parseInt(process.env.PORT || '12792', 10);
@@ -79,9 +80,13 @@ app.get('/api/integration-manifest', (req, res) => {
       `            "lastTireRotation":"2026-04-01","lastWash":"2026-05-15",`,
       `            "fluidsChecked":true,"tiresInspected":true,"lightsTested":true}'`,
       ``,
+      `SCHEDULE (when each vehicle next needs service):`,
+      `  curl -s ${baseUrl}/api/schedule            # due/overdue items, sorted`,
+      ``,
       `REPORTS (spreadsheet-ready CSV — opens in Excel / Numbers / Google Sheets):`,
       `  curl -s ${baseUrl}/api/reports/vehicles.csv -o fleet-vehicles.csv   # one row per vehicle`,
       `  curl -s ${baseUrl}/api/reports/logs.csv     -o fleet-checkins.csv   # one row per check-in`,
+      `  curl -s ${baseUrl}/api/reports/schedule.csv -o fleet-schedule.csv   # service due dates`,
     ].join('\n'),
     endpoints: {
       stats:       'GET /api/stats',
@@ -91,7 +96,8 @@ app.get('/api/integration-manifest', (req, res) => {
       maintenance: 'GET|POST /api/maintenance, GET|PATCH|DELETE /api/maintenance/:id',
       logs:        'GET /api/logs?vehicleId=<id> — vehicle check-in / inspection logs',
       checkin:     'POST /api/vehicles/:id/checkin — submit a completed inspection checklist',
-      reports:     'GET /api/reports/vehicles.csv, GET /api/reports/logs.csv — spreadsheet CSV exports',
+      schedule:    'GET /api/schedule — when each vehicle next needs service',
+      reports:     'GET /api/reports/{vehicles,logs,schedule}.csv — spreadsheet CSV exports',
       sync:        'GET /api/sync/pull?since=<ms>, POST /api/sync/push',
     },
   });
@@ -173,13 +179,18 @@ app.post('/api/vehicles/:id/checkin', (req, res) => {
     notes:            b.notes ? String(b.notes) : '',
   });
 
-  const updatedVehicle = db.update('vehicles', vehicle.id, {
+  const vehUpdate = {
     odometer:         Number(b.odometer),
     oilStatus:        b.oilStatus,
     lastTireRotation: b.lastTireRotation,
     lastWash:         b.lastWash,
     lastCheckIn:      log.createdAt,
-  });
+  };
+  // Record the oil-change date so the schedule engine can project the next one.
+  if (b.oilStatus === 'Oil changed today') {
+    vehUpdate.lastOilChange = new Date().toISOString().slice(0, 10);
+  }
+  const updatedVehicle = db.update('vehicles', vehicle.id, vehUpdate);
 
   broadcast('logs:created', log);
   broadcast('vehicles:updated', updatedVehicle);
@@ -200,6 +211,14 @@ app.get('/api/reports/vehicles.csv', (req, res) => {
 app.get('/api/reports/logs.csv', (req, res) => {
   sendCsv(res, 'fleet-checkins.csv', reports.logsCsv());
 });
+
+app.get('/api/reports/schedule.csv', (req, res) => {
+  sendCsv(res, 'fleet-service-schedule.csv', reports.scheduleCsv());
+});
+
+// ── Service schedule ───────────────────────────────────────────────────────
+// "When will each vehicle need service again" — drives the dashboard.
+app.get('/api/schedule', (req, res) => res.json(schedule.fleetSchedule()));
 
 // ── Sync API (for the future cloud webapp) ─────────────────────────────────
 // Pull: webapp asks for everything changed since a timestamp.

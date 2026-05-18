@@ -2,7 +2,6 @@
 const $ = sel => document.querySelector(sel);
 
 // ── The check-in checklist the employee must follow, in order ──────────────
-// Every item must be completed before a check-in log can be submitted.
 const CHECKLIST = [
   { key: 'odometer',         type: 'miles',
     label: 'Record current odometer reading (miles)' },
@@ -22,12 +21,12 @@ const CHECKLIST = [
 ];
 
 let vehiclesCache = [];
+let scheduleByVehicle = {};
 let currentVehicleId = null;
 
 async function api(path, opts) {
   const res = await fetch('/api' + path, {
-    headers: { 'Content-Type': 'application/json' },
-    ...opts,
+    headers: { 'Content-Type': 'application/json' }, ...opts,
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -41,33 +40,74 @@ function esc(s) {
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 }
 
-// ── Dashboard rendering ────────────────────────────────────────────────────
-function renderStats(s) {
+// "in 3d" / "due today" / "overdue 5d"
+function relDays(d) {
+  if (d == null) return 'no data';
+  if (d < 0)  return `overdue ${Math.abs(d)}d`;
+  if (d === 0) return 'due today';
+  return `in ${d}d`;
+}
+
+// ── Stat cards ─────────────────────────────────────────────────────────────
+function renderStats(s, sched) {
   $('#stats').innerHTML = [
-    ['Vehicles', s.vehicles], ['Active', s.active],
-    ['Maintenance', s.maintenance], ['Idle', s.idle],
-    ['Drivers', s.drivers], ['Open jobs', s.openMaintenance],
-  ].map(([label, num]) => `
-    <div class="stat"><div class="num">${num}</div><div class="label">${label}</div></div>
+    { label: 'Vehicles',       num: s.vehicles },
+    { label: 'Active',         num: s.active, cls: 'ok' },
+    { label: 'In maintenance', num: s.maintenance, cls: 'soon' },
+    { label: 'Idle',           num: s.idle },
+    { label: 'Service overdue', num: sched.overdue, cls: 'overdue' },
+    { label: 'Service soon',   num: sched.soon, cls: 'soon' },
+  ].map(c => `
+    <div class="stat ${c.cls || ''}">
+      <div class="num">${c.num}</div>
+      <div class="label">${c.label}</div>
+    </div>
   `).join('');
+}
+
+// ── Service-due list ───────────────────────────────────────────────────────
+function renderDue(dueItems) {
+  $('#dueSummary').textContent = dueItems.length
+    ? `${dueItems.length} item${dueItems.length > 1 ? 's' : ''} need attention`
+    : '';
+  if (!dueItems.length) {
+    $('#dueList').innerHTML = `<div class="all-clear">✅ All caught up — nothing due.</div>`;
+    return;
+  }
+  $('#dueList').innerHTML = dueItems.map(d => `
+    <div class="due-item ${d.status}" data-checkin="${d.vehicleId}">
+      <span class="due-icon">${d.status === 'overdue' ? '⚠️' : '🕒'}</span>
+      <span class="due-text"><b>${esc(d.vehicle)}</b> — ${esc(d.label)}</span>
+      <span class="due-when">${relDays(d.daysUntil)}</span>
+    </div>
+  `).join('');
+}
+
+// ── Vehicle table ──────────────────────────────────────────────────────────
+function nextPill(sv) {
+  if (!sv || !sv.next) return `<span class="pill unknown">no check-ins yet</span>`;
+  const n = sv.next;
+  return `<span class="pill ${n.status}">${esc(n.label)} · ${relDays(n.daysUntil)}</span>`;
 }
 
 function renderVehicles(rows) {
   vehiclesCache = rows;
   const tb = $('#vehicles tbody');
   if (!rows.length) {
-    tb.innerHTML = `<tr><td colspan="8" class="empty">No vehicles yet — add one above.</td></tr>`;
+    tb.innerHTML = `<tr><td colspan="7" class="empty">No vehicles yet — add one above.</td></tr>`;
     return;
   }
   tb.innerHTML = rows.map(v => `
     <tr>
-      <td>${esc(v.name)}</td>
-      <td>${esc([v.make, v.model].filter(Boolean).join(' ')) || '—'}</td>
-      <td>${esc(v.year) || '—'}</td>
-      <td>${esc(v.plate) || '—'}</td>
+      <td>
+        <div class="v-name">${esc(v.name)}</div>
+        ${v.plate ? `<div class="v-sub">${esc(v.plate)}</div>` : ''}
+      </td>
+      <td>${esc([v.make, v.model, v.year].filter(Boolean).join(' ')) || '—'}</td>
       <td><span class="badge ${v.status || 'idle'}">${esc(v.status || 'idle')}</span></td>
       <td>${v.odometer != null ? esc(v.odometer) + ' mi' : '—'}</td>
       <td>${v.lastCheckIn ? new Date(v.lastCheckIn).toLocaleDateString() : '—'}</td>
+      <td>${nextPill(scheduleByVehicle[v.id])}</td>
       <td class="row-actions">
         <button data-checkin="${v.id}">Check-in</button>
         <button class="ghost" data-del="${v.id}">Delete</button>
@@ -76,10 +116,30 @@ function renderVehicles(rows) {
   `).join('');
 }
 
+// ── Recent check-ins ───────────────────────────────────────────────────────
+function renderRecent(logs, vehicles) {
+  const nameById = Object.fromEntries(vehicles.map(v => [v.id, v.name]));
+  const rows = logs.slice().sort((a, b) => b.createdAt - a.createdAt).slice(0, 8);
+  $('#recent').innerHTML = rows.length ? rows.map(l => `
+    <div class="recent-row">
+      <b>${esc(nameById[l.vehicleId] || 'Unknown vehicle')}</b>
+      <span>· ${esc(l.employee)}</span>
+      <span class="r-od">· ${esc(l.odometer)} mi · ${esc(l.oilStatus)}</span>
+      <span class="r-when">${new Date(l.createdAt).toLocaleString()}</span>
+    </div>
+  `).join('') : `<div class="empty">No check-ins recorded yet.</div>`;
+}
+
+// ── Refresh everything ─────────────────────────────────────────────────────
 async function refresh() {
-  const [stats, vehicles] = await Promise.all([api('/stats'), api('/vehicles')]);
-  renderStats(stats);
+  const [stats, vehicles, sched, logs] = await Promise.all([
+    api('/stats'), api('/vehicles'), api('/schedule'), api('/logs'),
+  ]);
+  scheduleByVehicle = Object.fromEntries(sched.vehicles.map(v => [v.id, v]));
+  renderStats(stats, sched.summary);
+  renderDue(sched.dueItems);
   renderVehicles(vehicles);
+  renderRecent(logs, vehicles);
 }
 
 // ── Add vehicle ────────────────────────────────────────────────────────────
@@ -96,18 +156,32 @@ $('#addForm').addEventListener('submit', async e => {
   refresh();
 });
 
-// ── Vehicle row actions ────────────────────────────────────────────────────
+// ── Open check-in from a vehicle row or a due-list item ────────────────────
+function handleCheckinClick(e) {
+  const id = e.target.closest('[data-checkin]')?.dataset.checkin;
+  if (!id) return;
+  const v = vehiclesCache.find(x => x.id === id);
+  if (v) openCheckin(v);
+}
 $('#vehicles').addEventListener('click', async e => {
   const delId = e.target.dataset.del;
-  const ciId  = e.target.dataset.checkin;
-  if (delId) { await api('/vehicles/' + delId, { method: 'DELETE' }); refresh(); }
-  if (ciId) {
-    const v = vehiclesCache.find(x => x.id === ciId);
-    if (v) openCheckin(v);
-  }
+  if (delId) { await api('/vehicles/' + delId, { method: 'DELETE' }); refresh(); return; }
+  handleCheckinClick(e);
 });
+$('#dueList').addEventListener('click', handleCheckinClick);
 
 // ── Check-in modal ─────────────────────────────────────────────────────────
+function renderModalSchedule(vehicleId) {
+  const sv = scheduleByVehicle[vehicleId];
+  if (!sv) { $('#ciSchedule').innerHTML = ''; return; }
+  $('#ciSchedule').innerHTML = sv.items.map(it => `
+    <div class="ci-svc ${it.status}">
+      <div class="s-label">${esc(it.label)}</div>
+      <div class="s-when">${it.status === 'unknown' ? 'no data' : relDays(it.daysUntil)}</div>
+    </div>
+  `).join('');
+}
+
 function renderChecklist(vehicle) {
   $('#checklist').innerHTML = CHECKLIST.map((it, i) => {
     let field = '', hint = '';
@@ -146,14 +220,12 @@ function itemValue(it) {
   if (it.type === 'miles') return el.value === '' ? null : Number(el.value);
   return el.value || null;
 }
-
 function itemComplete(it) {
   const v = itemValue(it);
   if (it.type === 'check') return v === true;
   if (it.type === 'miles') return v != null && v >= 0;
   return v != null && v !== '';
 }
-
 function refreshChecklistState() {
   let allDone = true;
   for (const it of CHECKLIST) {
@@ -190,12 +262,12 @@ function openCheckin(vehicle) {
   $('#modalTitle').textContent = `Check-in — ${vehicle.name}`;
   $('#ciEmployee').value = '';
   $('#ciNotes').value = '';
+  renderModalSchedule(vehicle.id);
   renderChecklist(vehicle);
   refreshChecklistState();
   $('#modal').hidden = false;
   loadHistory(vehicle.id);
 }
-
 function closeModal() {
   $('#modal').hidden = true;
   currentVehicleId = null;
@@ -235,7 +307,10 @@ function connect() {
   };
   ws.onmessage = () => {
     refresh();
-    if (currentVehicleId) loadHistory(currentVehicleId);
+    if (currentVehicleId) {
+      renderModalSchedule(currentVehicleId);
+      loadHistory(currentVehicleId);
+    }
   };
 }
 

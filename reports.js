@@ -2,7 +2,8 @@
 // Spreadsheet-ready CSV reports over the fleet data.
 // CSV opens directly in Excel, Apple Numbers, and Google Sheets.
 
-const db = require('./db');
+const db       = require('./db');
+const schedule = require('./schedule');
 
 // RFC-4180 cell escaping: quote anything with a comma, quote, or newline.
 function csvCell(v) {
@@ -59,4 +60,22 @@ function logsCsv() {
   return toCsv(cols, rows);
 }
 
-module.exports = { vehiclesCsv, logsCsv };
+// One row per (vehicle, service item) — when each service is next due.
+function scheduleCsv() {
+  const rows = [];
+  for (const v of schedule.fleetSchedule().vehicles) {
+    for (const it of v.items) rows.push({ vehicle: v.name, ...it });
+  }
+  const cols = [
+    { label: 'Vehicle',    get: r => r.vehicle },
+    { label: 'Service',    get: r => r.label },
+    { label: 'Interval (days)', get: r => r.intervalDays },
+    { label: 'Last Done',  get: r => fmtDate(r.last) },
+    { label: 'Next Due',   get: r => fmtDate(r.due) },
+    { label: 'Days Until', get: r => r.daysUntil == null ? '' : r.daysUntil },
+    { label: 'Status',     get: r => r.status },
+  ];
+  return toCsv(cols, rows);
+}
+
+module.exports = { vehiclesCsv, logsCsv, scheduleCsv };

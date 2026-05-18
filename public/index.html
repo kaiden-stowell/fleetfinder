@@ -3,47 +3,73 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>FleetFinder</title>
+  <title>FleetFinder — Fleet Operations</title>
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
-  <header>
-    <h1>🚚 FleetFinder</h1>
-    <span id="conn" class="conn">connecting…</span>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">🚚</span>
+      <div>
+        <h1>FleetFinder</h1>
+        <p>Fleet operations dashboard</p>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="exports">
+        <a class="btn-link" href="/api/reports/vehicles.csv">⬇ Vehicles</a>
+        <a class="btn-link" href="/api/reports/logs.csv">⬇ Check-ins</a>
+        <a class="btn-link" href="/api/reports/schedule.csv">⬇ Schedule</a>
+      </div>
+      <span id="conn" class="conn">connecting…</span>
+    </div>
   </header>
 
-  <section id="stats" class="stats"></section>
+  <main>
+    <section id="stats" class="stats"></section>
 
-  <section class="panel">
-    <div class="panel-head">
-      <h2>Vehicles</h2>
-      <a class="btn-link" href="/api/reports/vehicles.csv">⬇ Vehicles CSV</a>
-      <a class="btn-link" href="/api/reports/logs.csv">⬇ Check-ins CSV</a>
-      <button id="addBtn">+ Add vehicle</button>
-    </div>
-    <form id="addForm" class="add-form" hidden>
-      <input name="name"  placeholder="Name (e.g. Truck 1)" required />
-      <input name="make"  placeholder="Make" />
-      <input name="model" placeholder="Model" />
-      <input name="year"  placeholder="Year" type="number" />
-      <input name="plate" placeholder="Plate" />
-      <select name="status">
-        <option value="active">active</option>
-        <option value="idle">idle</option>
-        <option value="maintenance">maintenance</option>
-      </select>
-      <button type="submit">Save</button>
-    </form>
-    <table id="vehicles">
-      <thead>
-        <tr>
-          <th>Name</th><th>Make / Model</th><th>Year</th><th>Plate</th>
-          <th>Status</th><th>Odometer</th><th>Last check-in</th><th></th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </section>
+    <section class="panel">
+      <div class="panel-head">
+        <h2>🔧 Service due</h2>
+        <span id="dueSummary" class="muted"></span>
+      </div>
+      <div id="dueList" class="due-list"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Vehicles</h2>
+        <button id="addBtn">+ Add vehicle</button>
+      </div>
+      <form id="addForm" class="add-form" hidden>
+        <input name="name"  placeholder="Name (e.g. Truck 1)" required />
+        <input name="make"  placeholder="Make" />
+        <input name="model" placeholder="Model" />
+        <input name="year"  placeholder="Year" type="number" />
+        <input name="plate" placeholder="Plate" />
+        <select name="status">
+          <option value="active">active</option>
+          <option value="idle">idle</option>
+          <option value="maintenance">maintenance</option>
+        </select>
+        <button type="submit">Save</button>
+      </form>
+      <table id="vehicles">
+        <thead>
+          <tr>
+            <th>Vehicle</th><th>Make / Model</th><th>Status</th>
+            <th>Odometer</th><th>Last check-in</th><th>Next service</th><th></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h2>Recent check-ins</h2></div>
+      <div id="recent" class="recent"></div>
+    </section>
+  </main>
 
   <!-- ── Check-in modal ─────────────────────────────────────────────────── -->
   <div id="modal" class="modal" hidden>
@@ -53,6 +79,8 @@
         <button id="modalClose" class="ghost">✕</button>
       </div>
       <div class="modal-body">
+        <div id="ciSchedule" class="ci-schedule"></div>
+
         <p class="hint">Complete every item on the checklist below. The log
           cannot be submitted until all items are done.</p>
 
