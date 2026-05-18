@@ -12,6 +12,7 @@ const WebSocket  = require('ws');
 const db       = require('./db');
 const reports  = require('./reports');
 const schedule = require('./schedule');
+const qr       = require('./qr');
 
 const HOST = process.env.HOST || '127.0.0.1';
 const PORT = parseInt(process.env.PORT || '12792', 10);
@@ -24,6 +25,26 @@ function getLocalVersion() {
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
+
+// ── LAN PIN gate ───────────────────────────────────────────────────────────
+// Requests from this Mac (localhost) are trusted — that's the admin console.
+// Requests from other devices on the LAN (phones scanning QR codes) must
+// supply the shared PIN via the X-Fleet-Pin header.
+const FLEET_PIN = process.env.FLEET_PIN || '';
+
+function isLoopback(req) {
+  const ip = req.socket.remoteAddress || '';
+  return ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1';
+}
+
+app.use('/api', (req, res, next) => {
+  if (req.path === '/integration-manifest') return next(); // agent-hub discovery
+  if (isLoopback(req)) return next();                       // admin on the Mac
+  if (!FLEET_PIN) return next();                            // no PIN configured
+  if ((req.get('X-Fleet-Pin') || '') === FLEET_PIN) return next();
+  res.status(401).json({ error: 'PIN required' });
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ── WebSocket: live updates for the dashboard ──────────────────────────────
@@ -45,7 +66,7 @@ function broadcast(event, data) {
 // agent-hub's local-hubs.js probes this endpoint to discover FleetFinder and
 // inject these instructions into every agent prompt.
 app.get('/api/integration-manifest', (req, res) => {
-  const baseUrl = `http://${HOST}:${PORT}`;
+  const baseUrl = `http://127.0.0.1:${PORT}`;
   res.json({
     kind: 'local-hub',
     slug: 'fleetfinder',
@@ -98,6 +119,7 @@ app.get('/api/integration-manifest', (req, res) => {
       checkin:     'POST /api/vehicles/:id/checkin — submit a completed inspection checklist',
       schedule:    'GET /api/schedule — when each vehicle next needs service',
       reports:     'GET /api/reports/{vehicles,logs,schedule}.csv — spreadsheet CSV exports',
+      qr:          'GET /v/:id (service page), /v/:id/qr.svg, /v/:id/print, /qr-sheet (printable QR codes)',
       sync:        'GET /api/sync/pull?since=<ms>, POST /api/sync/push',
     },
   });
@@ -220,6 +242,34 @@ app.get('/api/reports/schedule.csv', (req, res) => {
 // "When will each vehicle need service again" — drives the dashboard.
 app.get('/api/schedule', (req, res) => res.json(schedule.fleetSchedule()));
 
+// ── Per-vehicle QR pages ───────────────────────────────────────────────────
+// /v/:id           → that vehicle's mobile service page (the QR target)
+// /v/:id/qr.svg    → the QR image encoding the LAN URL of /v/:id
+// /v/:id/print     → printable QR card for one vehicle
+// /qr-sheet        → printable sheet of QR codes for the whole fleet
+app.get('/v/:id', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'vehicle.html'));
+});
+
+app.get('/v/:id/qr.svg', async (req, res) => {
+  if (!db.get('vehicles', req.params.id)) return res.status(404).send('not found');
+  try {
+    res.type('image/svg+xml').send(await qr.vehicleQrSvg(req.params.id));
+  } catch {
+    res.status(500).send('qr generation failed');
+  }
+});
+
+app.get('/v/:id/print', (req, res) => {
+  const v = db.get('vehicles', req.params.id);
+  if (!v) return res.status(404).send('vehicle not found');
+  res.type('html').send(qr.printCardHtml(v));
+});
+
+app.get('/qr-sheet', (req, res) => {
+  res.type('html').send(qr.sheetHtml(db.list('vehicles')));
+});
+
 // ── Sync API (for the future cloud webapp) ─────────────────────────────────
 // Pull: webapp asks for everything changed since a timestamp.
 app.get('/api/sync/pull', (req, res) => {
@@ -236,5 +286,8 @@ app.post('/api/sync/push', (req, res) => {
 });
 
 server.listen(PORT, HOST, () => {
-  console.log(`\n  FleetFinder → http://${HOST}:${PORT}\n`);
+  console.log(`\n  FleetFinder`);
+  console.log(`    admin    → http://127.0.0.1:${PORT}`);
+  console.log(`    LAN/QR   → ${qr.baseUrl()}`);
+  console.log(`    PIN gate → ${FLEET_PIN ? 'on' : 'OFF'}\n`);
 });

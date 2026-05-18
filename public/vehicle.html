@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FleetFinder — Vehicle Service</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body class="vpage">
+  <header class="vtop">
+    <span class="logo">🚚</span>
+    <div><h1>FleetFinder</h1><p>Vehicle service check-in</p></div>
+  </header>
+
+  <main class="vmain">
+    <!-- PIN gate -->
+    <div id="pinGate" class="pin-gate" hidden>
+      <div class="pin-card">
+        <div class="pin-lock">🔒</div>
+        <h2>Enter access PIN</h2>
+        <p>This vehicle's service page is protected. Ask your manager for the PIN.</p>
+        <input id="pinInput" type="tel" inputmode="numeric"
+               autocomplete="off" placeholder="••••" maxlength="12" />
+        <button id="pinBtn">Unlock</button>
+        <p id="pinErr" class="pin-err" hidden>Incorrect PIN — try again.</p>
+      </div>
+    </div>
+
+    <!-- vehicle content -->
+    <div id="vContent" hidden>
+      <div id="vHeader" class="v-header"></div>
+
+      <section class="v-section">
+        <h2>Service status</h2>
+        <div id="vSchedule" class="ci-schedule"></div>
+      </section>
+
+      <section class="v-section">
+        <h2>New check-in</h2>
+        <p class="hint">Complete every item below — submit unlocks once all
+          items are done.</p>
+        <label class="field">
+          <span>Your name</span>
+          <input id="ciEmployee" placeholder="Employee performing the check-in" />
+        </label>
+        <div id="checklist" class="checklist"></div>
+        <label class="field">
+          <span>Notes (optional)</span>
+          <textarea id="ciNotes" rows="2" placeholder="Anything to flag?"></textarea>
+        </label>
+        <button id="ciSubmit" disabled>Submit check-in</button>
+        <div id="ciDone" class="ci-done" hidden>✅ Check-in saved — thank you!</div>
+      </section>
+
+      <section class="v-section">
+        <h2>Recent check-ins</h2>
+        <div id="logHistory" class="log-history"></div>
+      </section>
+    </div>
+
+    <div id="vError" class="v-error" hidden></div>
+  </main>
+
+  <script src="/checklist-config.js"></script>
+  <script src="/vehicle.js"></script>
+</body>
+</html>

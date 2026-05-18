@@ -39,7 +39,10 @@
     <section class="panel">
       <div class="panel-head">
         <h2>Vehicles</h2>
-        <button id="addBtn">+ Add vehicle</button>
+        <div class="panel-actions">
+          <a class="btn-link" href="/qr-sheet" target="_blank">🏷 Print QR codes</a>
+          <button id="addBtn">+ Add vehicle</button>
+        </div>
       </div>
       <form id="addForm" class="add-form" hidden>
         <input name="name"  placeholder="Name (e.g. Truck 1)" required />
@@ -104,6 +107,7 @@
     </div>
   </div>
 
+  <script src="/checklist-config.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>

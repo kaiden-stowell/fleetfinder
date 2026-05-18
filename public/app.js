@@ -1,24 +1,8 @@
 'use strict';
 const $ = sel => document.querySelector(sel);
 
-// ── The check-in checklist the employee must follow, in order ──────────────
-const CHECKLIST = [
-  { key: 'odometer',         type: 'miles',
-    label: 'Record current odometer reading (miles)' },
-  { key: 'oilStatus',        type: 'select',
-    label: 'Check oil & record oil-change status',
-    options: ['Oil level OK', 'Oil change due soon', 'Oil changed today'] },
-  { key: 'lastTireRotation', type: 'date',
-    label: 'Tires rotated — enter date of last rotation' },
-  { key: 'lastWash',         type: 'date',
-    label: 'Vehicle washed — enter date of last wash' },
-  { key: 'fluidsChecked',    type: 'check',
-    label: 'All fluids checked (coolant, brake, washer, transmission)' },
-  { key: 'tiresInspected',   type: 'check',
-    label: 'Tire pressure & tread inspected' },
-  { key: 'lightsTested',     type: 'check',
-    label: 'Lights & turn signals tested' },
-];
+// Check-in checklist — defined once in /checklist-config.js.
+const CHECKLIST = window.FLEET_CHECKLIST;
 
 let vehiclesCache = [];
 let scheduleByVehicle = {};
@@ -110,6 +94,7 @@ function renderVehicles(rows) {
       <td>${nextPill(scheduleByVehicle[v.id])}</td>
       <td class="row-actions">
         <button data-checkin="${v.id}">Check-in</button>
+        <a class="btn-link" href="/v/${v.id}/print" target="_blank">QR</a>
         <button class="ghost" data-del="${v.id}">Delete</button>
       </td>
     </tr>
