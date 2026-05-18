@@ -50,3 +50,71 @@ th { font-size: 11px; text-transform: uppercase; color: var(--muted); }
 .badge.idle { background: rgba(139,146,163,.15); color: var(--idle); }
 .badge.maintenance { background: rgba(245,166,35,.15); color: var(--maint); }
 .empty { color: var(--muted); padding: 16px 12px; }
+.row-actions { display: flex; gap: 6px; justify-content: flex-end; }
+
+/* ── Check-in modal ──────────────────────────────────────────────────────── */
+.modal {
+  position: fixed; inset: 0; background: rgba(0,0,0,.6);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 40px 16px; overflow-y: auto; z-index: 50;
+}
+.modal[hidden] { display: none; }
+.modal-card {
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: 12px; width: 100%; max-width: 620px;
+}
+.modal-head {
+  display: flex; align-items: center; gap: 12px;
+  padding: 16px 20px; border-bottom: 1px solid var(--line);
+}
+.modal-head h2 { font-size: 16px; margin: 0; }
+.modal-head .ghost { margin-left: auto; padding: 4px 9px; }
+.modal-body { padding: 20px; }
+.hint { color: var(--muted); font-size: 12px; margin: 0 0 16px; }
+
+.field { display: block; margin-bottom: 14px; }
+.field > span { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; }
+.field input, .field textarea {
+  width: 100%; background: var(--bg); border: 1px solid var(--line);
+  color: var(--text); border-radius: 7px; padding: 8px 10px; font: inherit;
+}
+
+.checklist { border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
+.ck-item {
+  display: grid; grid-template-columns: 22px 22px 1fr auto;
+  align-items: center; gap: 10px;
+  padding: 11px 14px; border-bottom: 1px solid var(--line);
+}
+.ck-item:last-child { border-bottom: 0; }
+.ck-dot {
+  width: 14px; height: 14px; border-radius: 50%;
+  border: 2px solid var(--line);
+}
+.ck-item.done .ck-dot { background: var(--active); border-color: var(--active); }
+.ck-num { color: var(--muted); font-size: 12px; text-align: center; }
+.ck-label { font-size: 13px; }
+.ck-item.done .ck-label { color: var(--muted); }
+.ck-field input[type=number], .ck-field input[type=date], .ck-field select {
+  background: var(--bg); border: 1px solid var(--line); color: var(--text);
+  border-radius: 6px; padding: 5px 8px; font: inherit;
+}
+.ck-field input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--active); }
+
+#ciSubmit { width: 100%; margin: 16px 0 8px; padding: 10px; }
+#ciSubmit:disabled { background: var(--line); color: var(--muted); cursor: not-allowed; }
+
+.modal-body h3 { font-size: 13px; margin: 22px 0 8px; color: var(--muted); }
+.log-history { display: flex; flex-direction: column; gap: 8px; }
+.log {
+  background: var(--bg); border: 1px solid var(--line);
+  border-radius: 8px; padding: 10px 12px;
+}
+.log-head { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+.log-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 3px 12px; font-size: 12px;
+}
+.log-notes {
+  margin-top: 6px; font-size: 12px; color: var(--muted);
+  border-top: 1px solid var(--line); padding-top: 6px;
+}

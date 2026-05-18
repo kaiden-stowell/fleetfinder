@@ -77,6 +77,8 @@ app.get('/api/integration-manifest', (req, res) => {
       drivers:     'GET|POST /api/drivers, GET|PATCH|DELETE /api/drivers/:id',
       trips:       'GET|POST /api/trips, GET|PATCH|DELETE /api/trips/:id',
       maintenance: 'GET|POST /api/maintenance, GET|PATCH|DELETE /api/maintenance/:id',
+      logs:        'GET /api/logs?vehicleId=<id> — vehicle check-in / inspection logs',
+      checkin:     'POST /api/vehicles/:id/checkin — submit a completed inspection checklist',
       sync:        'GET /api/sync/pull?since=<ms>, POST /api/sync/push',
     },
   });
@@ -87,7 +89,11 @@ app.get('/api/stats', (req, res) => res.json(db.stats()));
 
 // ── Generic REST CRUD for every collection ─────────────────────────────────
 for (const coll of db.COLLECTIONS) {
-  app.get(`/api/${coll}`, (req, res) => res.json(db.list(coll)));
+  app.get(`/api/${coll}`, (req, res) => {
+    let rows = db.list(coll);
+    if (req.query.vehicleId) rows = rows.filter(r => r.vehicleId === req.query.vehicleId);
+    res.json(rows);
+  });
 
   app.get(`/api/${coll}/:id`, (req, res) => {
     const rec = db.get(coll, req.params.id);
@@ -115,6 +121,57 @@ for (const coll of db.COLLECTIONS) {
     res.json({ ok: true });
   });
 }
+
+// ── Vehicle check-in ───────────────────────────────────────────────────────
+// An employee submits a completed inspection checklist for one vehicle. This
+// creates a `logs` record and rolls the latest values onto the vehicle.
+const CHECKLIST_FIELDS = [
+  'odometer', 'oilStatus', 'lastTireRotation', 'lastWash',
+  'fluidsChecked', 'tiresInspected', 'lightsTested',
+];
+
+app.post('/api/vehicles/:id/checkin', (req, res) => {
+  const vehicle = db.get('vehicles', req.params.id);
+  if (!vehicle) return res.status(404).json({ error: 'vehicle not found' });
+
+  const b = req.body || {};
+  if (!b.employee || !String(b.employee).trim()) {
+    return res.status(400).json({ error: 'employee name is required' });
+  }
+  // Every checklist item must be completed before a check-in is accepted.
+  const missing = CHECKLIST_FIELDS.filter(k => {
+    const v = b[k];
+    return v === undefined || v === null || v === '' || v === false;
+  });
+  if (missing.length) {
+    return res.status(400).json({ error: 'checklist incomplete', missing });
+  }
+
+  const log = db.create('logs', {
+    vehicleId:        vehicle.id,
+    employee:         String(b.employee).trim(),
+    odometer:         Number(b.odometer),
+    oilStatus:        b.oilStatus,
+    lastTireRotation: b.lastTireRotation,
+    lastWash:         b.lastWash,
+    fluidsChecked:    !!b.fluidsChecked,
+    tiresInspected:   !!b.tiresInspected,
+    lightsTested:     !!b.lightsTested,
+    notes:            b.notes ? String(b.notes) : '',
+  });
+
+  const updatedVehicle = db.update('vehicles', vehicle.id, {
+    odometer:         Number(b.odometer),
+    oilStatus:        b.oilStatus,
+    lastTireRotation: b.lastTireRotation,
+    lastWash:         b.lastWash,
+    lastCheckIn:      log.createdAt,
+  });
+
+  broadcast('logs:created', log);
+  broadcast('vehicles:updated', updatedVehicle);
+  res.status(201).json({ log, vehicle: updatedVehicle });
+});
 
 // ── Sync API (for the future cloud webapp) ─────────────────────────────────
 // Pull: webapp asks for everything changed since a timestamp.

@@ -11,7 +11,7 @@ const DATA_DIR  = path.join(__dirname, 'data');
 const DB_FILE   = path.join(DATA_DIR, 'db.json');
 const DB_BACKUP = path.join(DATA_DIR, 'db.backup.json');
 
-const COLLECTIONS = ['vehicles', 'drivers', 'trips', 'maintenance'];
+const COLLECTIONS = ['vehicles', 'drivers', 'trips', 'maintenance', 'logs'];
 
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 

@@ -34,11 +34,45 @@
     </form>
     <table id="vehicles">
       <thead>
-        <tr><th>Name</th><th>Make / Model</th><th>Year</th><th>Plate</th><th>Status</th><th></th></tr>
+        <tr>
+          <th>Name</th><th>Make / Model</th><th>Year</th><th>Plate</th>
+          <th>Status</th><th>Odometer</th><th>Last check-in</th><th></th>
+        </tr>
       </thead>
       <tbody></tbody>
     </table>
   </section>
+
+  <!-- ── Check-in modal ─────────────────────────────────────────────────── -->
+  <div id="modal" class="modal" hidden>
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2 id="modalTitle">Vehicle check-in</h2>
+        <button id="modalClose" class="ghost">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="hint">Complete every item on the checklist below. The log
+          cannot be submitted until all items are done.</p>
+
+        <label class="field">
+          <span>Employee name</span>
+          <input id="ciEmployee" placeholder="Who is performing this check-in?" />
+        </label>
+
+        <div id="checklist" class="checklist"></div>
+
+        <label class="field">
+          <span>Notes (optional)</span>
+          <textarea id="ciNotes" rows="2" placeholder="Anything else to flag?"></textarea>
+        </label>
+
+        <button id="ciSubmit" disabled>Submit check-in log</button>
+
+        <h3>Check-in history</h3>
+        <div id="logHistory" class="log-history"></div>
+      </div>
+    </div>
+  </div>
 
   <script src="/app.js"></script>
 </body>
