@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FleetFinder</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header>
+    <h1>🚚 FleetFinder</h1>
+    <span id="conn" class="conn">connecting…</span>
+  </header>
+
+  <section id="stats" class="stats"></section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Vehicles</h2>
+      <button id="addBtn">+ Add vehicle</button>
+    </div>
+    <form id="addForm" class="add-form" hidden>
+      <input name="name"  placeholder="Name (e.g. Truck 1)" required />
+      <input name="make"  placeholder="Make" />
+      <input name="model" placeholder="Model" />
+      <input name="year"  placeholder="Year" type="number" />
+      <input name="plate" placeholder="Plate" />
+      <select name="status">
+        <option value="active">active</option>
+        <option value="idle">idle</option>
+        <option value="maintenance">maintenance</option>
+      </select>
+      <button type="submit">Save</button>
+    </form>
+    <table id="vehicles">
+      <thead>
+        <tr><th>Name</th><th>Make / Model</th><th>Year</th><th>Plate</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <script src="/app.js"></script>
+</body>
+</html>

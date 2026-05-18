@@ -1,0 +1,52 @@
+:root {
+  --bg: #0f1115; --panel: #181b22; --line: #2a2f3a;
+  --text: #e6e8ee; --muted: #8b92a3; --accent: #4f9cf9;
+  --active: #3ecf8e; --idle: #8b92a3; --maint: #f5a623;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; font: 14px/1.5 -apple-system, system-ui, sans-serif;
+  background: var(--bg); color: var(--text);
+}
+header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 16px 24px; border-bottom: 1px solid var(--line);
+}
+header h1 { font-size: 18px; margin: 0; }
+.conn { font-size: 12px; color: var(--muted); margin-left: auto; }
+.conn.live { color: var(--active); }
+
+.stats {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px; padding: 24px;
+}
+.stat {
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: 10px; padding: 14px 16px;
+}
+.stat .num { font-size: 26px; font-weight: 600; }
+.stat .label { font-size: 12px; color: var(--muted); text-transform: uppercase; }
+
+.panel { margin: 0 24px 24px; }
+.panel-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.panel-head h2 { font-size: 15px; margin: 0; }
+button {
+  background: var(--accent); color: #fff; border: 0; border-radius: 7px;
+  padding: 7px 12px; font-size: 13px; cursor: pointer;
+}
+button.ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); }
+
+.add-form { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.add-form input, .add-form select {
+  background: var(--panel); border: 1px solid var(--line); color: var(--text);
+  border-radius: 7px; padding: 7px 10px; font-size: 13px;
+}
+
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+th { font-size: 11px; text-transform: uppercase; color: var(--muted); }
+.badge { padding: 2px 8px; border-radius: 20px; font-size: 12px; }
+.badge.active { background: rgba(62,207,142,.15); color: var(--active); }
+.badge.idle { background: rgba(139,146,163,.15); color: var(--idle); }
+.badge.maintenance { background: rgba(245,166,35,.15); color: var(--maint); }
+.empty { color: var(--muted); padding: 16px 12px; }
