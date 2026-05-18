@@ -9,7 +9,8 @@ const fs         = require('fs');
 const path       = require('path');
 const WebSocket  = require('ws');
 
-const db = require('./db');
+const db      = require('./db');
+const reports = require('./reports');
 
 const HOST = process.env.HOST || '127.0.0.1';
 const PORT = parseInt(process.env.PORT || '12792', 10);
@@ -63,6 +64,7 @@ app.get('/api/integration-manifest', (req, res) => {
       `  curl -s ${baseUrl}/api/drivers             # all drivers`,
       `  curl -s ${baseUrl}/api/trips               # all trips`,
       `  curl -s ${baseUrl}/api/maintenance         # all maintenance items`,
+      `  curl -s "${baseUrl}/api/logs?vehicleId=<id>"  # check-in logs for one vehicle`,
       ``,
       `WRITE (collection = vehicles|drivers|trips|maintenance):`,
       `  curl -s -X POST ${baseUrl}/api/vehicles -H 'Content-Type: application/json' \\`,
@@ -70,6 +72,16 @@ app.get('/api/integration-manifest', (req, res) => {
       `  curl -s -X PATCH ${baseUrl}/api/vehicles/<id> -H 'Content-Type: application/json' \\`,
       `       -d '{"status":"maintenance"}'`,
       `  curl -s -X DELETE ${baseUrl}/api/vehicles/<id>`,
+      ``,
+      `CHECK-IN (employee vehicle inspection — every checklist field is required):`,
+      `  curl -s -X POST ${baseUrl}/api/vehicles/<id>/checkin -H 'Content-Type: application/json' \\`,
+      `       -d '{"employee":"Sam","odometer":48210,"oilStatus":"Oil level OK",`,
+      `            "lastTireRotation":"2026-04-01","lastWash":"2026-05-15",`,
+      `            "fluidsChecked":true,"tiresInspected":true,"lightsTested":true}'`,
+      ``,
+      `REPORTS (spreadsheet-ready CSV — opens in Excel / Numbers / Google Sheets):`,
+      `  curl -s ${baseUrl}/api/reports/vehicles.csv -o fleet-vehicles.csv   # one row per vehicle`,
+      `  curl -s ${baseUrl}/api/reports/logs.csv     -o fleet-checkins.csv   # one row per check-in`,
     ].join('\n'),
     endpoints: {
       stats:       'GET /api/stats',
@@ -79,6 +91,7 @@ app.get('/api/integration-manifest', (req, res) => {
       maintenance: 'GET|POST /api/maintenance, GET|PATCH|DELETE /api/maintenance/:id',
       logs:        'GET /api/logs?vehicleId=<id> — vehicle check-in / inspection logs',
       checkin:     'POST /api/vehicles/:id/checkin — submit a completed inspection checklist',
+      reports:     'GET /api/reports/vehicles.csv, GET /api/reports/logs.csv — spreadsheet CSV exports',
       sync:        'GET /api/sync/pull?since=<ms>, POST /api/sync/push',
     },
   });
@@ -171,6 +184,21 @@ app.post('/api/vehicles/:id/checkin', (req, res) => {
   broadcast('logs:created', log);
   broadcast('vehicles:updated', updatedVehicle);
   res.status(201).json({ log, vehicle: updatedVehicle });
+});
+
+// ── Spreadsheet reports (CSV) ──────────────────────────────────────────────
+function sendCsv(res, filename, csv) {
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.send(csv);
+}
+
+app.get('/api/reports/vehicles.csv', (req, res) => {
+  sendCsv(res, 'fleet-vehicles.csv', reports.vehiclesCsv());
+});
+
+app.get('/api/reports/logs.csv', (req, res) => {
+  sendCsv(res, 'fleet-checkins.csv', reports.logsCsv());
 });
 
 // ── Sync API (for the future cloud webapp) ─────────────────────────────────

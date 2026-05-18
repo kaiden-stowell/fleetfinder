@@ -110,14 +110,16 @@ $('#vehicles').addEventListener('click', async e => {
 // ── Check-in modal ─────────────────────────────────────────────────────────
 function renderChecklist(vehicle) {
   $('#checklist').innerHTML = CHECKLIST.map((it, i) => {
-    let field = '';
+    let field = '', hint = '';
     if (it.type === 'miles') {
       const val = vehicle.odometer != null ? `value="${esc(vehicle.odometer)}"` : '';
       field = `<input type="number" min="0" data-key="${it.key}" placeholder="miles" ${val} />`;
+      if (vehicle.odometer != null) hint = `Last recorded: ${esc(vehicle.odometer)} mi`;
     } else if (it.type === 'date') {
       const prev = it.key === 'lastTireRotation' ? vehicle.lastTireRotation
                  : it.key === 'lastWash'         ? vehicle.lastWash : '';
       field = `<input type="date" data-key="${it.key}" value="${esc(prev || '')}" />`;
+      if (prev) hint = `Remembered from last check-in: ${esc(prev)} — update only if done again`;
     } else if (it.type === 'select') {
       field = `<select data-key="${it.key}">
         <option value="">— select —</option>
@@ -129,7 +131,10 @@ function renderChecklist(vehicle) {
     return `<div class="ck-item" data-for="${it.key}">
       <span class="ck-dot"></span>
       <span class="ck-num">${i + 1}</span>
-      <span class="ck-label">${esc(it.label)}</span>
+      <div class="ck-text">
+        <span class="ck-label">${esc(it.label)}</span>
+        ${hint ? `<span class="ck-hint">${hint}</span>` : ''}
+      </div>
       <span class="ck-field">${field}</span>
     </div>`;
   }).join('');

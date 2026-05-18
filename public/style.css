@@ -35,6 +35,14 @@ button {
   padding: 7px 12px; font-size: 13px; cursor: pointer;
 }
 button.ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); }
+.btn-link {
+  background: transparent; color: var(--muted); border: 1px solid var(--line);
+  border-radius: 7px; padding: 6px 11px; font-size: 13px;
+  text-decoration: none; cursor: pointer;
+}
+.btn-link:hover { color: var(--text); border-color: var(--accent); }
+.panel-head .btn-link:first-of-type { margin-left: auto; }
+.panel-head #addBtn { margin-left: 0; }
 
 .add-form { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
 .add-form input, .add-form select {
@@ -92,8 +100,10 @@ th { font-size: 11px; text-transform: uppercase; color: var(--muted); }
 }
 .ck-item.done .ck-dot { background: var(--active); border-color: var(--active); }
 .ck-num { color: var(--muted); font-size: 12px; text-align: center; }
+.ck-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .ck-label { font-size: 13px; }
 .ck-item.done .ck-label { color: var(--muted); }
+.ck-hint { font-size: 11px; color: var(--accent); }
 .ck-field input[type=number], .ck-field input[type=date], .ck-field select {
   background: var(--bg); border: 1px solid var(--line); color: var(--text);
   border-radius: 6px; padding: 5px 8px; font: inherit;
