@@ -1,5 +1,14 @@
 [
   {
+    "version": "2026.5.4",
+    "released_at": "2026-05-19",
+    "title": "Simpler add-a-vehicle",
+    "changes": [
+      "Adding a vehicle now opens a clean pop-up form with clearly labeled fields, instead of a cramped inline row of boxes.",
+      "The form validates the required name field and reports any error clearly."
+    ]
+  },
+  {
     "version": "2026.5.3",
     "released_at": "2026-05-19",
     "title": "Cleaner, less crowded dashboard",

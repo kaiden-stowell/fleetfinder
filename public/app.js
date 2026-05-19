@@ -106,7 +106,7 @@ function renderVehicles(rows) {
           check-ins, service, and dispatch.</div>
         <button id="emptyAdd">+ Add your first vehicle</button>
       </div></td></tr>`;
-    $('#emptyAdd').addEventListener('click', showAddForm);
+    $('#emptyAdd').addEventListener('click', openAddModal);
     return;
   }
   tb.innerHTML = rows.map(v => {
@@ -186,22 +186,30 @@ function renderOut(vehicles) {
 }
 
 // ── Add vehicle ────────────────────────────────────────────────────────────
-function showAddForm() {
-  $('#addForm').hidden = false;
-  $('#addForm').querySelector('input').focus();
+function openAddModal() {
+  $('#addForm').reset();
+  $('#addModal').hidden = false;
+  $('#addForm').querySelector('input[name="name"]').focus();
 }
-$('#addBtn').addEventListener('click', () => {
-  $('#addForm').hidden = !$('#addForm').hidden;
-  if (!$('#addForm').hidden) $('#addForm').querySelector('input').focus();
+$('#addBtn').addEventListener('click', openAddModal);
+$('#addClose').addEventListener('click', () => { $('#addModal').hidden = true; });
+$('#addModal').addEventListener('click', e => {
+  if (e.target.id === 'addModal') $('#addModal').hidden = true;
 });
 $('#addForm').addEventListener('submit', async e => {
   e.preventDefault();
   const fd = new FormData(e.target);
   const body = Object.fromEntries([...fd.entries()].filter(([, v]) => v !== ''));
-  await api('/vehicles', { method: 'POST', body: JSON.stringify(body) });
-  e.target.reset();
-  e.target.hidden = true;
-  refresh();
+  $('#addSubmit').disabled = true;
+  try {
+    await api('/vehicles', { method: 'POST', body: JSON.stringify(body) });
+    $('#addModal').hidden = true;
+    refresh();
+  } catch (err) {
+    alert('Could not add vehicle: ' + err.message);
+  } finally {
+    $('#addSubmit').disabled = false;
+  }
 });
 
 // ── Open check-in from a vehicle row or a due-list item ────────────────────

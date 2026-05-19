@@ -1,6 +1,6 @@
 {
   "name": "fleetfinder",
-  "version": "2026.5.3",
+  "version": "2026.5.4",
   "description": "Vehicle fleet management hub — vehicles, drivers, trips, maintenance. Sibling hub for agent-hub.",
   "main": "server.js",
   "type": "commonjs",

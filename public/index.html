@@ -61,19 +61,6 @@
           <button id="addBtn" title="Add a new vehicle to your fleet">+ Add vehicle</button>
         </div>
       </div>
-      <form id="addForm" class="add-form" hidden>
-        <input name="name"  placeholder="Name (e.g. Truck 1)" required />
-        <input name="make"  placeholder="Make" />
-        <input name="model" placeholder="Model" />
-        <input name="year"  placeholder="Year" type="number" />
-        <input name="plate" placeholder="Plate" />
-        <select name="status">
-          <option value="active">active</option>
-          <option value="idle">idle</option>
-          <option value="maintenance">maintenance</option>
-        </select>
-        <button type="submit">Save</button>
-      </form>
       <table id="vehicles">
         <thead>
           <tr>
@@ -162,6 +149,39 @@
       </div>
       <div class="modal-body">
         <div id="changelogBody" class="changelog-body"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Add vehicle modal ──────────────────────────────────────────────── -->
+  <div id="addModal" class="modal" hidden>
+    <div class="modal-card modal-sm">
+      <div class="modal-head">
+        <h2>Add a vehicle</h2>
+        <button id="addClose" class="ghost">✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="addForm">
+          <label class="field"><span>Name <em>(required)</em></span>
+            <input name="name" placeholder="e.g. Truck 1" required /></label>
+          <div class="field-grid">
+            <label class="field"><span>Make</span>
+              <input name="make" placeholder="e.g. Ford" /></label>
+            <label class="field"><span>Model</span>
+              <input name="model" placeholder="e.g. F-150" /></label>
+            <label class="field"><span>Year</span>
+              <input name="year" type="number" placeholder="e.g. 2022" /></label>
+            <label class="field"><span>Plate</span>
+              <input name="plate" placeholder="License plate" /></label>
+          </div>
+          <label class="field"><span>Status</span>
+            <select name="status">
+              <option value="active">Active</option>
+              <option value="idle">Idle</option>
+              <option value="maintenance">In maintenance</option>
+            </select></label>
+          <button type="submit" id="addSubmit">Add vehicle</button>
+        </form>
       </div>
     </div>
   </div>
