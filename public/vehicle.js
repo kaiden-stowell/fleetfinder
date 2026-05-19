@@ -17,6 +17,13 @@ function relDays(d) {
   if (d === 0) return 'due today';
   return `in ${d}d`;
 }
+function outFor(since) {
+  if (!since) return '';
+  const ms = Date.now() - since, h = ms / 3600000;
+  if (h < 1)  return Math.round(ms / 60000) + 'm';
+  if (h < 24) return Math.round(h) + 'h';
+  return Math.round(h / 24) + 'd';
+}
 function show(sel, on) { $(sel).hidden = !on; }
 
 async function api(path, opts = {}) {
@@ -71,6 +78,9 @@ function renderHeader(v) {
       <span>Odometer: <b>${v.odometer != null ? esc(v.odometer) + ' mi' : '—'}</b></span>
       <span>Last check-in: <b>${v.lastCheckIn
         ? new Date(v.lastCheckIn).toLocaleDateString() : '—'}</b></span>
+      <span>Location: <b>${v.location === 'jobsite'
+        ? '🚧 ' + esc(v.currentJobsite || 'On jobsite') + ' (out ' + outFor(v.outSince) + ')'
+        : '🏢 At the yard'}</b></span>
     </div>`;
 }
 

@@ -78,4 +78,29 @@ function scheduleCsv() {
   return toCsv(cols, rows);
 }
 
-module.exports = { vehiclesCsv, logsCsv, scheduleCsv };
+function fmtDuration(ms) {
+  if (ms == null) return '';
+  const h = ms / 3600000;
+  if (h < 1)  return Math.round(ms / 60000) + 'm';
+  if (h < 24) return h.toFixed(1) + 'h';
+  return (h / 24).toFixed(1) + 'd';
+}
+
+// One row per jobsite trip (vehicle sent out and returned).
+function tripsCsv() {
+  const vById = Object.fromEntries(db.list('vehicles').map(v => [v.id, v]));
+  const rows = db.list('trips').slice().sort((a, b) => (b.outAt || 0) - (a.outAt || 0));
+  const cols = [
+    { label: 'Vehicle',       get: t => (vById[t.vehicleId] || {}).name || t.vehicleId },
+    { label: 'Jobsite',       get: t => t.jobsite },
+    { label: 'Driver',        get: t => t.driver },
+    { label: 'Dispatched By', get: t => t.dispatchedBy },
+    { label: 'Out At',        get: t => fmtTime(t.outAt) },
+    { label: 'Back At',       get: t => fmtTime(t.backAt) },
+    { label: 'Duration',      get: t => t.backAt ? fmtDuration(t.backAt - t.outAt) : '' },
+    { label: 'Status',        get: t => t.status },
+  ];
+  return toCsv(cols, rows);
+}
+
+module.exports = { vehiclesCsv, logsCsv, scheduleCsv, tripsCsv };

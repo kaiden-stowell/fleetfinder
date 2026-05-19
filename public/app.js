@@ -33,12 +33,32 @@ function relDays(d) {
   return `in ${d}d`;
 }
 
+// How long a vehicle has been out, e.g. "45m" / "6h" / "2d"
+function outFor(since) {
+  if (!since) return '';
+  const ms = Date.now() - since, h = ms / 3600000;
+  if (h < 1)  return Math.round(ms / 60000) + 'm';
+  if (h < 24) return Math.round(h) + 'h';
+  return Math.round(h / 24) + 'd';
+}
+
+function locationCell(v) {
+  if (v.location === 'jobsite') {
+    return `<div class="loc out">🚧 ${esc(v.currentJobsite || 'On jobsite')}</div>
+      <div class="loc-sub">out ${outFor(v.outSince)}</div>
+      <button class="ghost loc-btn" data-return="${v.id}">Mark returned</button>`;
+  }
+  return `<div class="loc yard">🏢 At the yard</div>
+    <button class="loc-btn" data-dispatch="${v.id}">Send out</button>`;
+}
+
 // ── Stat cards ─────────────────────────────────────────────────────────────
 function renderStats(s, sched) {
   $('#stats').innerHTML = [
     { label: 'Vehicles',       num: s.vehicles },
     { label: 'Active',         num: s.active, cls: 'ok' },
     { label: 'In maintenance', num: s.maintenance, cls: 'soon' },
+    { label: 'Out on jobsite', num: s.onJobsite },
     { label: 'Idle',           num: s.idle },
     { label: 'Service overdue', num: sched.overdue, cls: 'overdue' },
     { label: 'Service soon',   num: sched.soon, cls: 'soon' },
@@ -79,7 +99,7 @@ function renderVehicles(rows) {
   vehiclesCache = rows;
   const tb = $('#vehicles tbody');
   if (!rows.length) {
-    tb.innerHTML = `<tr><td colspan="7" class="empty">No vehicles yet — add one above.</td></tr>`;
+    tb.innerHTML = `<tr><td colspan="8" class="empty">No vehicles yet — add one above.</td></tr>`;
     return;
   }
   tb.innerHTML = rows.map(v => `
@@ -91,6 +111,7 @@ function renderVehicles(rows) {
       </td>
       <td>${esc([v.make, v.model, v.year].filter(Boolean).join(' ')) || '—'}</td>
       <td><span class="badge ${v.status || 'idle'}">${esc(v.status || 'idle')}</span></td>
+      <td class="loc-cell">${locationCell(v)}</td>
       <td>${v.odometer != null ? esc(v.odometer) + ' mi' : '—'}</td>
       <td>${v.lastCheckIn ? new Date(v.lastCheckIn).toLocaleDateString() : '—'}</td>
       <td>${nextPill(scheduleByVehicle[v.id])}</td>
@@ -129,8 +150,28 @@ async function refresh() {
   }
   renderStats(stats, sched.summary);
   renderDue(sched.dueItems);
+  renderOut(vehicles);
   renderVehicles(vehicles);
   renderRecent(logs, vehicles);
+}
+
+// ── Vehicles currently out on jobsites ─────────────────────────────────────
+function renderOut(vehicles) {
+  const out = vehicles.filter(v => v.location === 'jobsite')
+    .sort((a, b) => (a.outSince || 0) - (b.outSince || 0));
+  $('#outSummary').textContent = out.length
+    ? `${out.length} vehicle${out.length > 1 ? 's' : ''} out` : '';
+  if (!out.length) {
+    $('#outList').innerHTML = `<div class="all-clear">🏢 All vehicles are at the yard.</div>`;
+    return;
+  }
+  $('#outList').innerHTML = out.map(v => `
+    <div class="due-item" data-return="${v.id}" title="Click to mark returned">
+      <span class="due-icon">🚧</span>
+      <span class="due-text"><b>${esc(v.name)}</b> — ${esc(v.currentJobsite || 'On jobsite')}</span>
+      <span class="due-when">out ${outFor(v.outSince)}</span>
+    </div>
+  `).join('');
 }
 
 // ── Add vehicle ────────────────────────────────────────────────────────────
@@ -155,11 +196,71 @@ function handleCheckinClick(e) {
   if (v) openCheckin(v);
 }
 $('#vehicles').addEventListener('click', async e => {
-  const delId = e.target.dataset.del;
-  if (delId) { await api('/vehicles/' + delId, { method: 'DELETE' }); refresh(); return; }
+  const delId  = e.target.dataset.del;
+  const dispId = e.target.dataset.dispatch;
+  const retId  = e.target.dataset.return;
+  if (delId)  { await api('/vehicles/' + delId, { method: 'DELETE' }); refresh(); return; }
+  if (dispId) { openDispatch(dispId); return; }
+  if (retId)  { markReturned(retId); return; }
   handleCheckinClick(e);
 });
 $('#dueList').addEventListener('click', handleCheckinClick);
+$('#outList').addEventListener('click', e => {
+  const id = e.target.closest('[data-return]')?.dataset.return;
+  if (id) markReturned(id);
+});
+
+// ── Dispatch / return ──────────────────────────────────────────────────────
+let dispatchVehicleId = null;
+
+function openDispatch(id) {
+  const v = vehiclesCache.find(x => x.id === id);
+  if (!v) return;
+  dispatchVehicleId = id;
+  $('#dispVehicle').textContent = `Sending out: ${v.name}`;
+  $('#dispJobsite').value = '';
+  $('#dispDriver').value = '';
+  $('#dispBy').value = '';
+  $('#dispatchModal').hidden = false;
+  $('#dispJobsite').focus();
+}
+function closeDispatch() { $('#dispatchModal').hidden = true; dispatchVehicleId = null; }
+
+$('#dispClose').addEventListener('click', closeDispatch);
+$('#dispatchModal').addEventListener('click', e => {
+  if (e.target.id === 'dispatchModal') closeDispatch();
+});
+$('#dispConfirm').addEventListener('click', async () => {
+  if (!dispatchVehicleId) return;
+  $('#dispConfirm').disabled = true;
+  try {
+    await api(`/vehicles/${dispatchVehicleId}/dispatch`, {
+      method: 'POST',
+      body: JSON.stringify({
+        jobsite:      $('#dispJobsite').value.trim(),
+        driver:       $('#dispDriver').value.trim(),
+        dispatchedBy: $('#dispBy').value.trim(),
+      }),
+    });
+    closeDispatch();
+    refresh();
+  } catch (e) {
+    alert('Could not dispatch: ' + e.message);
+  } finally {
+    $('#dispConfirm').disabled = false;
+  }
+});
+
+async function markReturned(id) {
+  const v = vehiclesCache.find(x => x.id === id);
+  if (!confirm(`Mark ${v ? v.name : 'this vehicle'} as back at the business?`)) return;
+  try {
+    await api(`/vehicles/${id}/return`, { method: 'POST' });
+    refresh();
+  } catch (e) {
+    alert('Could not mark returned: ' + e.message);
+  }
+}
 
 // ── Check-in modal ─────────────────────────────────────────────────────────
 function renderModalSchedule(vehicleId) {

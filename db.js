@@ -110,6 +110,7 @@ function stats() {
     active:      v.filter(x => x.status === 'active').length,
     maintenance: v.filter(x => x.status === 'maintenance').length,
     idle:        v.filter(x => x.status === 'idle').length,
+    onJobsite:   v.filter(x => x.location === 'jobsite').length,
     drivers: _db.drivers.length,
     trips:   _db.trips.length,
     openMaintenance: _db.maintenance.filter(m => m.status !== 'done').length,

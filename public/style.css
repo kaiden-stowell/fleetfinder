@@ -339,3 +339,12 @@ tbody tr:hover { background: var(--panel2); }
   background: rgba(245,166,35,.16); border-radius: 20px;
   padding: 1px 7px; margin-left: 4px; white-space: nowrap;
 }
+
+/* ── Dispatch / location ─────────────────────────────────────────────────── */
+.modal-sm { max-width: 420px; }
+.loc-cell { min-width: 150px; }
+.loc { font-size: 12.5px; }
+.loc.out { color: var(--soon); font-weight: 600; }
+.loc.yard { color: var(--muted); }
+.loc-sub { font-size: 11px; color: var(--muted); margin: 1px 0 4px; }
+.loc-btn { padding: 4px 9px; font-size: 11px; margin-top: 4px; }

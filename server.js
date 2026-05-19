@@ -119,9 +119,10 @@ app.get('/api/integration-manifest', (req, res) => {
       maintenance: 'GET|POST /api/maintenance, GET|PATCH|DELETE /api/maintenance/:id',
       logs:        'GET /api/logs?vehicleId=<id> — vehicle check-in / inspection logs',
       checkin:     'POST /api/vehicles/:id/checkin — submit a completed inspection checklist',
+      dispatch:    'POST /api/vehicles/:id/dispatch {jobsite,driver} — send out; POST /api/vehicles/:id/return — mark back at the business',
       damage:      'GET /api/damage?vehicleId=<id>; POST /api/vehicles/:id/damage (multipart photos[]); DELETE /api/damage/:id',
       schedule:    'GET /api/schedule — when each vehicle next needs service',
-      reports:     'GET /api/reports/{vehicles,logs,schedule}.csv — spreadsheet CSV exports',
+      reports:     'GET /api/reports/{vehicles,logs,schedule,trips}.csv — spreadsheet CSV exports',
       qr:          'GET /v/:id (service page), /v/:id/qr.svg, /v/:id/print, /qr-sheet (printable QR codes)',
       sync:        'GET /api/sync/pull?since=<ms>, POST /api/sync/push',
     },
@@ -271,6 +272,54 @@ app.post('/api/vehicles/:id/checkin', (req, res) => {
   res.status(201).json({ log, vehicle: updatedVehicle });
 });
 
+// ── Dispatch: send a vehicle out to a jobsite / mark it returned ───────────
+// Each out-and-back is recorded as a `trips` record. The vehicle carries a
+// denormalised `location` ('yard' | 'jobsite') for quick display.
+app.post('/api/vehicles/:id/dispatch', (req, res) => {
+  const v = db.get('vehicles', req.params.id);
+  if (!v) return res.status(404).json({ error: 'vehicle not found' });
+  if (v.location === 'jobsite') {
+    return res.status(409).json({ error: 'vehicle is already out on a jobsite' });
+  }
+  const b = req.body || {};
+  const trip = db.create('trips', {
+    vehicleId:    v.id,
+    jobsite:      b.jobsite ? String(b.jobsite) : '',
+    driver:       b.driver ? String(b.driver) : '',
+    dispatchedBy: b.dispatchedBy ? String(b.dispatchedBy) : '',
+    outAt:        Date.now(),
+    backAt:       null,
+    status:       'out',
+  });
+  const updated = db.update('vehicles', v.id, {
+    location:       'jobsite',
+    currentTripId:  trip.id,
+    currentJobsite: trip.jobsite,
+    outSince:       trip.outAt,
+  });
+  broadcast('trips:created', trip);
+  broadcast('vehicles:updated', updated);
+  res.status(201).json({ trip, vehicle: updated });
+});
+
+app.post('/api/vehicles/:id/return', (req, res) => {
+  const v = db.get('vehicles', req.params.id);
+  if (!v) return res.status(404).json({ error: 'vehicle not found' });
+  if (v.location !== 'jobsite') {
+    return res.status(409).json({ error: 'vehicle is not currently out' });
+  }
+  const trip = v.currentTripId
+    ? db.get('trips', v.currentTripId)
+    : db.list('trips').find(t => t.vehicleId === v.id && t.status === 'out');
+  if (trip) db.update('trips', trip.id, { backAt: Date.now(), status: 'returned' });
+  const updated = db.update('vehicles', v.id, {
+    location: 'yard', currentTripId: null, currentJobsite: null, outSince: null,
+  });
+  broadcast('vehicles:updated', updated);
+  if (trip) broadcast('trips:updated', db.get('trips', trip.id));
+  res.json({ vehicle: updated, trip: trip ? db.get('trips', trip.id) : null });
+});
+
 // ── Spreadsheet reports (CSV) ──────────────────────────────────────────────
 function sendCsv(res, filename, csv) {
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
@@ -288,6 +337,10 @@ app.get('/api/reports/logs.csv', (req, res) => {
 
 app.get('/api/reports/schedule.csv', (req, res) => {
   sendCsv(res, 'fleet-service-schedule.csv', reports.scheduleCsv());
+});
+
+app.get('/api/reports/trips.csv', (req, res) => {
+  sendCsv(res, 'fleet-jobsite-trips.csv', reports.tripsCsv());
 });
 
 // ── Service schedule ───────────────────────────────────────────────────────

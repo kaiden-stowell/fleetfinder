@@ -20,6 +20,7 @@
         <a class="btn-link" href="/api/reports/vehicles.csv">⬇ Vehicles</a>
         <a class="btn-link" href="/api/reports/logs.csv">⬇ Check-ins</a>
         <a class="btn-link" href="/api/reports/schedule.csv">⬇ Schedule</a>
+        <a class="btn-link" href="/api/reports/trips.csv">⬇ Trips</a>
       </div>
       <span id="conn" class="conn">connecting…</span>
     </div>
@@ -34,6 +35,14 @@
         <span id="dueSummary" class="muted"></span>
       </div>
       <div id="dueList" class="due-list"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>🚧 Out on jobsites</h2>
+        <span id="outSummary" class="muted"></span>
+      </div>
+      <div id="outList" class="due-list"></div>
     </section>
 
     <section class="panel">
@@ -60,7 +69,7 @@
       <table id="vehicles">
         <thead>
           <tr>
-            <th>Vehicle</th><th>Make / Model</th><th>Status</th>
+            <th>Vehicle</th><th>Make / Model</th><th>Status</th><th>Location</th>
             <th>Odometer</th><th>Last check-in</th><th>Next service</th><th></th>
           </tr>
         </thead>
@@ -114,6 +123,26 @@
 
         <h3>Check-in history</h3>
         <div id="logHistory" class="log-history"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Dispatch modal ─────────────────────────────────────────────────── -->
+  <div id="dispatchModal" class="modal" hidden>
+    <div class="modal-card modal-sm">
+      <div class="modal-head">
+        <h2>🚧 Send out to jobsite</h2>
+        <button id="dispClose" class="ghost">✕</button>
+      </div>
+      <div class="modal-body">
+        <p id="dispVehicle" class="hint"></p>
+        <label class="field"><span>Jobsite / location</span>
+          <input id="dispJobsite" placeholder="e.g. 5th Street project" /></label>
+        <label class="field"><span>Driver (optional)</span>
+          <input id="dispDriver" placeholder="Driver name" /></label>
+        <label class="field"><span>Dispatched by (optional)</span>
+          <input id="dispBy" placeholder="Your name" /></label>
+        <button id="dispConfirm">Mark out on jobsite</button>
       </div>
     </div>
   </div>
