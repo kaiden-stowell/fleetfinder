@@ -3,7 +3,18 @@
 Local vehicle fleet management hub — tracks **vehicles, drivers, trips, and
 maintenance**. Built as a sibling **local hub** for `agent-hub`.
 
-## Run
+## Install (one-liner)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/kaiden-stowell/fleetfinder/main/install.sh | bash
+```
+
+This clones FleetFinder to `~/fleetfinder`, installs dependencies, generates an
+access PIN, and registers a launchd service so it runs in the background and
+starts on boot. Re-running it updates in place and preserves your data, photos,
+and PIN. Requires macOS, Node.js 18+, and git.
+
+## Run manually
 
 ```bash
 npm install
