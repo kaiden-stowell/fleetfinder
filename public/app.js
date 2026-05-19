@@ -46,22 +46,21 @@ function locationCell(v) {
   if (v.location === 'jobsite') {
     return `<div class="loc out">🚧 Out on a job</div>
       <div class="loc-sub">out ${outFor(v.outSince)}</div>
-      <button class="ghost loc-btn" data-return="${v.id}">Mark returned</button>`;
+      <button class="ghost loc-btn" data-return="${v.id}"
+        title="Mark this vehicle back at the business">Mark returned</button>`;
   }
   return `<div class="loc yard">🏢 At the yard</div>
-    <button class="loc-btn" data-dispatch="${v.id}">Send out</button>`;
+    <button class="loc-btn" data-dispatch="${v.id}"
+      title="Send this vehicle out on a job">Send out</button>`;
 }
 
 // ── Stat cards ─────────────────────────────────────────────────────────────
 function renderStats(s, sched) {
   $('#stats').innerHTML = [
-    { label: 'Vehicles',       num: s.vehicles },
-    { label: 'Active',         num: s.active, cls: 'ok' },
-    { label: 'In maintenance', num: s.maintenance, cls: 'soon' },
-    { label: 'Out on jobsite', num: s.onJobsite },
-    { label: 'Idle',           num: s.idle },
+    { label: 'Vehicles',        num: s.vehicles },
+    { label: 'Out on jobs',     num: s.onJobsite },
     { label: 'Service overdue', num: sched.overdue, cls: 'overdue' },
-    { label: 'Service soon',   num: sched.soon, cls: 'soon' },
+    { label: 'Service soon',    num: sched.soon, cls: 'soon' },
   ].map(c => `
     <div class="stat ${c.cls || ''}">
       <div class="num">${c.num}</div>
@@ -99,29 +98,40 @@ function renderVehicles(rows) {
   vehiclesCache = rows;
   const tb = $('#vehicles tbody');
   if (!rows.length) {
-    tb.innerHTML = `<tr><td colspan="8" class="empty">No vehicles yet — add one above.</td></tr>`;
+    tb.innerHTML = `<tr><td colspan="7">
+      <div class="empty-state">
+        <div class="empty-icon">🚚</div>
+        <div class="empty-title">No vehicles yet</div>
+        <div class="empty-text">Add your trucks and vans to start tracking
+          check-ins, service, and dispatch.</div>
+        <button id="emptyAdd">+ Add your first vehicle</button>
+      </div></td></tr>`;
+    $('#emptyAdd').addEventListener('click', showAddForm);
     return;
   }
-  tb.innerHTML = rows.map(v => `
+  tb.innerHTML = rows.map(v => {
+    const sub = [v.make, v.model, v.year, v.plate].filter(Boolean).join(' · ');
+    return `
     <tr>
       <td>
         <div class="v-name">${esc(v.name)}${damageCountByVehicle[v.id]
           ? ` <span class="dmg-badge">📷 ${damageCountByVehicle[v.id]}</span>` : ''}</div>
-        ${v.plate ? `<div class="v-sub">${esc(v.plate)}</div>` : ''}
+        ${sub ? `<div class="v-sub">${esc(sub)}</div>` : ''}
       </td>
-      <td>${esc([v.make, v.model, v.year].filter(Boolean).join(' ')) || '—'}</td>
       <td><span class="badge ${v.status || 'idle'}">${esc(v.status || 'idle')}</span></td>
       <td class="loc-cell">${locationCell(v)}</td>
       <td>${v.odometer != null ? esc(v.odometer) + ' mi' : '—'}</td>
       <td>${v.lastCheckIn ? new Date(v.lastCheckIn).toLocaleDateString() : '—'}</td>
       <td>${nextPill(scheduleByVehicle[v.id])}</td>
       <td class="row-actions">
-        <button data-checkin="${v.id}">Check-in</button>
-        <a class="btn-link" href="/v/${v.id}/print" target="_blank">QR</a>
-        <button class="ghost" data-del="${v.id}">Delete</button>
+        <button data-checkin="${v.id}" title="Run an inspection check-in for this vehicle">Check-in</button>
+        <a class="btn-link" href="/v/${v.id}/print" target="_blank"
+           title="Open a printable QR code for this vehicle">QR</a>
+        <button class="ghost" data-del="${v.id}" title="Remove this vehicle from the fleet">Delete</button>
       </td>
     </tr>
-  `).join('');
+  `;
+  }).join('');
 }
 
 // ── Recent check-ins ───────────────────────────────────────────────────────
@@ -135,7 +145,8 @@ function renderRecent(logs, vehicles) {
       <span class="r-od">· ${esc(l.odometer)} mi · ${esc(l.oilStatus)}</span>
       <span class="r-when">${new Date(l.createdAt).toLocaleString()}</span>
     </div>
-  `).join('') : `<div class="empty">No check-ins recorded yet.</div>`;
+  `).join('') : `<div class="empty">No check-ins yet — they'll show up here once
+    employees start scanning QR codes.</div>`;
 }
 
 // ── Refresh everything ─────────────────────────────────────────────────────
@@ -175,8 +186,13 @@ function renderOut(vehicles) {
 }
 
 // ── Add vehicle ────────────────────────────────────────────────────────────
+function showAddForm() {
+  $('#addForm').hidden = false;
+  $('#addForm').querySelector('input').focus();
+}
 $('#addBtn').addEventListener('click', () => {
   $('#addForm').hidden = !$('#addForm').hidden;
+  if (!$('#addForm').hidden) $('#addForm').querySelector('input').focus();
 });
 $('#addForm').addEventListener('submit', async e => {
   e.preventDefault();
@@ -444,6 +460,65 @@ $('#ciSubmit').addEventListener('click', async () => {
     refreshChecklistState();
   }
 });
+
+// ── Changelog ──────────────────────────────────────────────────────────────
+async function openChangelog() {
+  const body = $('#changelogBody');
+  body.innerHTML = '<div class="empty">Loading…</div>';
+  $('#changelogModal').hidden = false;
+  try {
+    const entries = await api('/changelog');
+    if (!entries.length) {
+      body.innerHTML = '<div class="empty">No changelog yet.</div>';
+      return;
+    }
+    $('#changelogTitle').textContent = `What's new in v${entries[0].version}`;
+    body.innerHTML = entries.map((e, i) => `
+      <div class="changelog-entry ${i === 0 ? 'current' : ''}">
+        <div class="changelog-head">
+          <span class="changelog-version">v${esc(e.version)}</span>
+          ${e.released_at ? `<span class="changelog-date">${esc(e.released_at)}</span>` : ''}
+        </div>
+        ${e.title ? `<div class="changelog-subtitle">${esc(e.title)}</div>` : ''}
+        <ul class="changelog-list">${(e.changes || []).map(c => `<li>${esc(c)}</li>`).join('')}</ul>
+      </div>
+    `).join('');
+  } catch (err) {
+    body.innerHTML = `<div class="empty">Could not load changelog: ${esc(err.message)}</div>`;
+  }
+}
+$('#version').addEventListener('click', openChangelog);
+$('#changelogClose').addEventListener('click', () => { $('#changelogModal').hidden = true; });
+$('#changelogModal').addEventListener('click', e => {
+  if (e.target.id === 'changelogModal') $('#changelogModal').hidden = true;
+});
+
+// ── Welcome guide & help ───────────────────────────────────────────────────
+$('#helpBtn').addEventListener('click', () => { $('#helpModal').hidden = false; });
+$('#helpClose').addEventListener('click', () => { $('#helpModal').hidden = true; });
+$('#helpModal').addEventListener('click', e => {
+  if (e.target.id === 'helpModal') $('#helpModal').hidden = true;
+});
+
+function dismissWelcome() {
+  localStorage.setItem('fleetWelcomeSeen', '1');
+  $('#welcomeModal').hidden = true;
+}
+$('#welcomeStart').addEventListener('click', dismissWelcome);
+$('#welcomeHelp').addEventListener('click', () => {
+  dismissWelcome();
+  $('#helpModal').hidden = false;
+});
+if (!localStorage.getItem('fleetWelcomeSeen')) {
+  $('#welcomeModal').hidden = false;
+}
+
+// ── Export menu ────────────────────────────────────────────────────────────
+$('#exportBtn').addEventListener('click', e => {
+  e.stopPropagation();
+  $('#exportDrop').hidden = !$('#exportDrop').hidden;
+});
+document.addEventListener('click', () => { $('#exportDrop').hidden = true; });
 
 // ── Live updates over WebSocket ────────────────────────────────────────────
 function connect() {

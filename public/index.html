@@ -16,13 +16,17 @@
       </div>
     </div>
     <div class="topbar-right">
-      <div class="exports">
-        <a class="btn-link" href="/api/reports/vehicles.csv">⬇ Vehicles</a>
-        <a class="btn-link" href="/api/reports/logs.csv">⬇ Check-ins</a>
-        <a class="btn-link" href="/api/reports/schedule.csv">⬇ Schedule</a>
-        <a class="btn-link" href="/api/reports/trips.csv">⬇ Trips</a>
+      <div class="export-menu">
+        <button id="exportBtn" class="btn-link" title="Download spreadsheet reports">⬇ Export ▾</button>
+        <div id="exportDrop" class="export-drop" hidden>
+          <a href="/api/reports/vehicles.csv">Vehicles</a>
+          <a href="/api/reports/logs.csv">Check-ins</a>
+          <a href="/api/reports/schedule.csv">Service schedule</a>
+          <a href="/api/reports/trips.csv">Jobsite trips</a>
+        </div>
       </div>
-      <span id="version" class="version"></span>
+      <button id="helpBtn" class="help-btn" title="Help & how-to guide">? Help</button>
+      <span id="version" class="version" title="Click to see what's new"></span>
       <span id="conn" class="conn">connecting…</span>
     </div>
   </header>
@@ -30,28 +34,31 @@
   <main>
     <section id="stats" class="stats"></section>
 
-    <section class="panel">
-      <div class="panel-head">
-        <h2>🔧 Service due</h2>
-        <span id="dueSummary" class="muted"></span>
-      </div>
-      <div id="dueList" class="due-list"></div>
-    </section>
+    <div class="panel-row">
+      <section class="panel">
+        <div class="panel-head">
+          <h2>🔧 Service due</h2>
+          <span id="dueSummary" class="muted"></span>
+        </div>
+        <div id="dueList" class="due-list"></div>
+      </section>
 
-    <section class="panel">
-      <div class="panel-head">
-        <h2>🚧 Out on jobsites</h2>
-        <span id="outSummary" class="muted"></span>
-      </div>
-      <div id="outList" class="due-list"></div>
-    </section>
+      <section class="panel">
+        <div class="panel-head">
+          <h2>🚧 Out on jobsites</h2>
+          <span id="outSummary" class="muted"></span>
+        </div>
+        <div id="outList" class="due-list"></div>
+      </section>
+    </div>
 
     <section class="panel">
       <div class="panel-head">
         <h2>Vehicles</h2>
         <div class="panel-actions">
-          <a class="btn-link" href="/qr-sheet" target="_blank">🏷 Print QR codes</a>
-          <button id="addBtn">+ Add vehicle</button>
+          <a class="btn-link" href="/qr-sheet" target="_blank"
+             title="Open a printable sheet of QR codes for every vehicle">🏷 Print QR codes</a>
+          <button id="addBtn" title="Add a new vehicle to your fleet">+ Add vehicle</button>
         </div>
       </div>
       <form id="addForm" class="add-form" hidden>
@@ -70,7 +77,7 @@
       <table id="vehicles">
         <thead>
           <tr>
-            <th>Vehicle</th><th>Make / Model</th><th>Status</th><th>Location</th>
+            <th>Vehicle</th><th>Status</th><th>Location</th>
             <th>Odometer</th><th>Last check-in</th><th>Next service</th><th></th>
           </tr>
         </thead>
@@ -142,6 +149,115 @@
         <label class="field"><span>Dispatched by (optional)</span>
           <input id="dispBy" placeholder="Your name" /></label>
         <button id="dispConfirm">Mark out on jobsite</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Changelog modal ────────────────────────────────────────────────── -->
+  <div id="changelogModal" class="modal" hidden>
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2 id="changelogTitle">What's new</h2>
+        <button id="changelogClose" class="ghost">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="changelogBody" class="changelog-body"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Welcome guide (first run) ──────────────────────────────────────── -->
+  <div id="welcomeModal" class="modal" hidden>
+    <div class="modal-card">
+      <div class="modal-head"><h2>👋 Welcome to FleetFinder</h2></div>
+      <div class="modal-body">
+        <p class="welcome-intro">FleetFinder keeps your whole vehicle fleet in
+          one place — the condition of every vehicle, when it's due for service,
+          and where it is right now. Here's how to get going:</p>
+        <div class="welcome-steps">
+          <div class="welcome-step"><span class="ws-num">1</span>
+            <div><b>Add your vehicles</b>
+              <p>Click <b>+ Add vehicle</b> and enter each truck or van.</p></div></div>
+          <div class="welcome-step"><span class="ws-num">2</span>
+            <div><b>Print QR codes</b>
+              <p>Use <b>Print QR codes</b> and put a code inside each vehicle's cab.</p></div></div>
+          <div class="welcome-step"><span class="ws-num">3</span>
+            <div><b>Employees check in</b>
+              <p>They scan the code with a phone and complete the inspection checklist.</p></div></div>
+          <div class="welcome-step"><span class="ws-num">4</span>
+            <div><b>Stay ahead of service</b>
+              <p>The dashboard flags anything overdue or due soon — no spreadsheets to chase.</p></div></div>
+        </div>
+        <div class="welcome-actions">
+          <button id="welcomeStart">Get started</button>
+          <button class="ghost" id="welcomeHelp">Open the help guide</button>
+        </div>
+        <p class="muted welcome-foot">You can reopen this guide any time from
+          <b>? Help</b> in the top bar.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Help guide ─────────────────────────────────────────────────────── -->
+  <div id="helpModal" class="modal" hidden>
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2>FleetFinder Help</h2>
+        <button id="helpClose" class="ghost">✕</button>
+      </div>
+      <div class="modal-body help-body">
+        <p class="hint">Tap a topic to expand it.</p>
+
+        <details open><summary>What FleetFinder does</summary>
+          <p>FleetFinder tracks every vehicle in your fleet: its condition,
+          service schedule, location, and a photo record of any damage.
+          The dashboard you're looking at is the office view. Employees use
+          their phones to check vehicles in.</p></details>
+
+        <details><summary>Adding & managing vehicles</summary>
+          <p>Click <b>+ Add vehicle</b> in the Vehicles panel and fill in the
+          name, make, model, plate, and status. A vehicle's row shows its
+          status, location, odometer, last check-in, and next service due.
+          Use <b>Delete</b> to remove a vehicle.</p></details>
+
+        <details><summary>Check-ins & the inspection checklist</summary>
+          <p>A check-in is a quick vehicle inspection. Click <b>Check-in</b> on
+          a vehicle (or have an employee scan its QR code). They enter their
+          name and complete a 7-step checklist — odometer, oil, tire rotation,
+          wash, fluids, tire condition, and lights. The check-in can't be
+          submitted until every item is done, so nothing gets skipped.</p></details>
+
+        <details><summary>QR codes</summary>
+          <p>Every vehicle has its own QR code. Use <b>QR</b> on a row to print
+          one, or <b>Print QR codes</b> for a full sheet. Stick the code inside
+          the cab. When an employee scans it with a phone, they land on that
+          vehicle's service page and can run a check-in on the spot.</p></details>
+
+        <details><summary>The access PIN</summary>
+          <p>Phones connecting over Wi-Fi must enter a shared PIN the first
+          time. This office dashboard (on the host Mac) never needs it. The PIN
+          is set in the <code>.env</code> file in the FleetFinder folder.</p></details>
+
+        <details><summary>Service schedule</summary>
+          <p>From check-in history, FleetFinder works out when each vehicle is
+          next due for an oil change, tire rotation, wash, and inspection. The
+          <b>Service due</b> panel lists anything overdue or coming up. Each
+          vehicle row also shows its next service as a colored tag.</p></details>
+
+        <details><summary>Jobsite dispatch</summary>
+          <p>When a vehicle leaves, click <b>Send out</b> (optionally note the
+          driver). When it returns, click <b>Mark returned</b>. The <b>Out on
+          jobsites</b> panel shows everything that's away and for how long.</p></details>
+
+        <details><summary>Damage photos</summary>
+          <p>Open a vehicle's <b>Check-in</b> window — or its phone page — and
+          use the Damage photos section to upload pictures of any damage with a
+          short description. A 📷 badge appears on the vehicle's row.</p></details>
+
+        <details><summary>Reports</summary>
+          <p>The buttons at the top right export spreadsheets (CSV) you can open
+          in Excel, Numbers, or Google Sheets: <b>Vehicles</b>, <b>Check-ins</b>,
+          <b>Schedule</b>, and <b>Trips</b>.</p></details>
       </div>
     </div>
   </div>

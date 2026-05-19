@@ -1,0 +1,41 @@
+[
+  {
+    "version": "2026.5.3",
+    "released_at": "2026-05-19",
+    "title": "Cleaner, less crowded dashboard",
+    "changes": [
+      "Trimmed the top stat cards from seven down to the four that matter — Vehicles, Out on jobs, Service overdue, Service soon.",
+      "Service due and Out on jobsites now sit side by side instead of stacked, so there's far less scrolling.",
+      "The four CSV export buttons are now one tidy 'Export' menu in the top bar.",
+      "The vehicles table is narrower — make, model, and plate now sit neatly under the vehicle name."
+    ]
+  },
+  {
+    "version": "2026.5.2",
+    "released_at": "2026-05-19",
+    "title": "Easier to learn — welcome guide & built-in help",
+    "changes": [
+      "New: a first-run welcome guide that walks new users through adding vehicles, printing QR codes, and running check-ins.",
+      "New: a built-in Help guide — click '? Help' in the top bar for how-to topics covering every feature.",
+      "Friendlier empty states — an empty Vehicles list now prompts you to add your first vehicle instead of showing a blank space.",
+      "Inline hints and tooltips added across the dashboard so panels and buttons explain themselves."
+    ]
+  },
+  {
+    "version": "2026.5.1",
+    "released_at": "2026-05-19",
+    "title": "First versioned release",
+    "changes": [
+      "Fleet dashboard — a live, dark-themed control panel listing every vehicle with its status, location, odometer, and next service due.",
+      "Vehicle check-ins — employees complete an enforced 7-step inspection checklist (odometer, oil, tire rotation, wash, fluids, tire condition, lights); every check-in is logged with full per-vehicle history.",
+      "Service schedule — projects when each vehicle next needs an oil change, tire rotation, wash, and inspection, flagging anything overdue or due soon.",
+      "Printable QR codes — every vehicle gets a QR code (single card or a full sheet) that opens its mobile service page when scanned.",
+      "Damage photos — upload and review photos of vehicle damage from the dashboard or a phone.",
+      "Jobsite dispatch — mark vehicles out on a job and back at the business, with a live 'out on jobsites' view and trip history.",
+      "Spreadsheet reports — one-click CSV exports for vehicles, check-ins, the service schedule, and jobsite trips.",
+      "PIN-protected phone access — devices on the local network enter a shared PIN; the admin dashboard on the host Mac needs no login.",
+      "One-line installer — a curl-based install that sets FleetFinder up as a background service on macOS.",
+      "agent-hub integration — FleetFinder is discovered as a sibling hub so agents can read and update the fleet."
+    ]
+  }
+]

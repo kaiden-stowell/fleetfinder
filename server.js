@@ -132,6 +132,13 @@ app.get('/api/integration-manifest', (req, res) => {
 // ── Stats / version ────────────────────────────────────────────────────────
 app.get('/api/stats', (req, res) => res.json(db.stats()));
 app.get('/api/version', (req, res) => res.json({ version: getLocalVersion() }));
+app.get('/api/changelog', (req, res) => {
+  try {
+    res.json(JSON.parse(fs.readFileSync(path.join(__dirname, 'changelog.json'), 'utf8')));
+  } catch {
+    res.json([]);
+  }
+});
 
 // ── Damage photos ──────────────────────────────────────────────────────────
 // Uploaded images live in data/uploads/ with unguessable UUID filenames and
