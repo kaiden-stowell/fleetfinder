@@ -44,7 +44,7 @@ function outFor(since) {
 
 function locationCell(v) {
   if (v.location === 'jobsite') {
-    return `<div class="loc out">🚧 ${esc(v.currentJobsite || 'On jobsite')}</div>
+    return `<div class="loc out">🚧 Out on a job</div>
       <div class="loc-sub">out ${outFor(v.outSince)}</div>
       <button class="ghost loc-btn" data-return="${v.id}">Mark returned</button>`;
   }
@@ -168,7 +168,7 @@ function renderOut(vehicles) {
   $('#outList').innerHTML = out.map(v => `
     <div class="due-item" data-return="${v.id}" title="Click to mark returned">
       <span class="due-icon">🚧</span>
-      <span class="due-text"><b>${esc(v.name)}</b> — ${esc(v.currentJobsite || 'On jobsite')}</span>
+      <span class="due-text"><b>${esc(v.name)}</b> — out on a job</span>
       <span class="due-when">out ${outFor(v.outSince)}</span>
     </div>
   `).join('');
@@ -218,11 +218,10 @@ function openDispatch(id) {
   if (!v) return;
   dispatchVehicleId = id;
   $('#dispVehicle').textContent = `Sending out: ${v.name}`;
-  $('#dispJobsite').value = '';
   $('#dispDriver').value = '';
   $('#dispBy').value = '';
   $('#dispatchModal').hidden = false;
-  $('#dispJobsite').focus();
+  $('#dispDriver').focus();
 }
 function closeDispatch() { $('#dispatchModal').hidden = true; dispatchVehicleId = null; }
 
@@ -237,7 +236,6 @@ $('#dispConfirm').addEventListener('click', async () => {
     await api(`/vehicles/${dispatchVehicleId}/dispatch`, {
       method: 'POST',
       body: JSON.stringify({
-        jobsite:      $('#dispJobsite').value.trim(),
         driver:       $('#dispDriver').value.trim(),
         dispatchedBy: $('#dispBy').value.trim(),
       }),

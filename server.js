@@ -119,7 +119,7 @@ app.get('/api/integration-manifest', (req, res) => {
       maintenance: 'GET|POST /api/maintenance, GET|PATCH|DELETE /api/maintenance/:id',
       logs:        'GET /api/logs?vehicleId=<id> — vehicle check-in / inspection logs',
       checkin:     'POST /api/vehicles/:id/checkin — submit a completed inspection checklist',
-      dispatch:    'POST /api/vehicles/:id/dispatch {jobsite,driver} — send out; POST /api/vehicles/:id/return — mark back at the business',
+      dispatch:    'POST /api/vehicles/:id/dispatch {driver} — send out on a job; POST /api/vehicles/:id/return — mark back at the business',
       damage:      'GET /api/damage?vehicleId=<id>; POST /api/vehicles/:id/damage (multipart photos[]); DELETE /api/damage/:id',
       schedule:    'GET /api/schedule — when each vehicle next needs service',
       reports:     'GET /api/reports/{vehicles,logs,schedule,trips}.csv — spreadsheet CSV exports',
@@ -284,7 +284,6 @@ app.post('/api/vehicles/:id/dispatch', (req, res) => {
   const b = req.body || {};
   const trip = db.create('trips', {
     vehicleId:    v.id,
-    jobsite:      b.jobsite ? String(b.jobsite) : '',
     driver:       b.driver ? String(b.driver) : '',
     dispatchedBy: b.dispatchedBy ? String(b.dispatchedBy) : '',
     outAt:        Date.now(),
@@ -292,10 +291,9 @@ app.post('/api/vehicles/:id/dispatch', (req, res) => {
     status:       'out',
   });
   const updated = db.update('vehicles', v.id, {
-    location:       'jobsite',
-    currentTripId:  trip.id,
-    currentJobsite: trip.jobsite,
-    outSince:       trip.outAt,
+    location:      'jobsite',
+    currentTripId: trip.id,
+    outSince:      trip.outAt,
   });
   broadcast('trips:created', trip);
   broadcast('vehicles:updated', updated);
@@ -313,7 +311,7 @@ app.post('/api/vehicles/:id/return', (req, res) => {
     : db.list('trips').find(t => t.vehicleId === v.id && t.status === 'out');
   if (trip) db.update('trips', trip.id, { backAt: Date.now(), status: 'returned' });
   const updated = db.update('vehicles', v.id, {
-    location: 'yard', currentTripId: null, currentJobsite: null, outSince: null,
+    location: 'yard', currentTripId: null, outSince: null,
   });
   broadcast('vehicles:updated', updated);
   if (trip) broadcast('trips:updated', db.get('trips', trip.id));

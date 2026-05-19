@@ -92,7 +92,6 @@ function tripsCsv() {
   const rows = db.list('trips').slice().sort((a, b) => (b.outAt || 0) - (a.outAt || 0));
   const cols = [
     { label: 'Vehicle',       get: t => (vById[t.vehicleId] || {}).name || t.vehicleId },
-    { label: 'Jobsite',       get: t => t.jobsite },
     { label: 'Driver',        get: t => t.driver },
     { label: 'Dispatched By', get: t => t.dispatchedBy },
     { label: 'Out At',        get: t => fmtTime(t.outAt) },

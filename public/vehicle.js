@@ -79,7 +79,7 @@ function renderHeader(v) {
       <span>Last check-in: <b>${v.lastCheckIn
         ? new Date(v.lastCheckIn).toLocaleDateString() : '—'}</b></span>
       <span>Location: <b>${v.location === 'jobsite'
-        ? '🚧 ' + esc(v.currentJobsite || 'On jobsite') + ' (out ' + outFor(v.outSince) + ')'
+        ? '🚧 Out on a job (out ' + outFor(v.outSince) + ')'
         : '🏢 At the yard'}</b></span>
     </div>`;
 }
