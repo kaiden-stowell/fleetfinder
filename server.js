@@ -21,7 +21,7 @@ const PORT = parseInt(process.env.PORT || '12792', 10);
 
 function getLocalVersion() {
   try { return JSON.parse(fs.readFileSync(path.join(__dirname, 'version.json'), 'utf8')).version; }
-  catch { return '0.1.0'; }
+  catch { return '2026.5.1'; }
 }
 
 const app = express();
@@ -129,8 +129,9 @@ app.get('/api/integration-manifest', (req, res) => {
   });
 });
 
-// ── Stats ──────────────────────────────────────────────────────────────────
+// ── Stats / version ────────────────────────────────────────────────────────
 app.get('/api/stats', (req, res) => res.json(db.stats()));
+app.get('/api/version', (req, res) => res.json({ version: getLocalVersion() }));
 
 // ── Damage photos ──────────────────────────────────────────────────────────
 // Uploaded images live in data/uploads/ with unguessable UUID filenames and

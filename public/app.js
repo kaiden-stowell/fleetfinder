@@ -464,5 +464,8 @@ function connect() {
   };
 }
 
+api('/version')
+  .then(v => { $('#version').textContent = 'v' + v.version; })
+  .catch(() => {});
 refresh().catch(err => { $('#conn').textContent = 'error'; console.error(err); });
 connect();
